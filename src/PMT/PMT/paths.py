@@ -1,6 +1,8 @@
+import os
+
 class Paths:
     paths = {
-        'parent' : r'C:\PMT',
+        'parent' : os.path.join(os.getenv('LOCALAPPDATA'), 'PMT'),
         'unity' : r'placeholder',
         'maya' : r'placeholder',
         'houdini' : r'placeholder',

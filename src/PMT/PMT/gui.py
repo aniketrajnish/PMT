@@ -18,8 +18,8 @@ class PMTWindow(QMainWindow):
         self.setWindowTitle('Makra\'s PMT')
         self.setWindowIcon(QIcon('Files/logo.png'))
         
-        self.setGeometry(300, 300, 500, 80)
-        self.setFixedSize(500, 80)      
+        self.setGeometry(300, 300, 350, 80)
+        self.setFixedSize(350, 80)      
         
         self.show()
         

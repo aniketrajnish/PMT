@@ -12,6 +12,8 @@ class PMT:
         try:
             if not os.path.exists(self.basePath):
                 os.makedirs(self.basePath)
+                if os.name == 'nt':
+                    os.system(f'attrib +h {self.basePath}')
                 return True, f'Base folder created at {self.basePath}'
         except Exception as e:
             raise RuntimeError('C:/ drive not found')
@@ -23,6 +25,13 @@ class PMT:
             projPath = os.path.join(self.basePath, projName)
             if not os.path.exists(projPath):
                 os.makedirs(projPath)
-                return True, f'Project folder {projPath} created successfully.'
+                
+                subFolders = ['Art Depot', 'Game Engine Depot', 'Intemediate Depot', 'PMT Config']                
+                for subFolder in subFolders:
+                    os.makedirs(os.path.join(projPath, subFolder))
+                
+                return True, f'Project folder created successfully.'
         except:
-            raise RuntimeError('Could not create project folder')
+            raise RuntimeError('Could not create project folder')   
+    
+        
