@@ -1,4 +1,5 @@
 import os
+from tkinter import SEL
 from paths import Paths
 
 class PMT:
@@ -26,12 +27,36 @@ class PMT:
             if not os.path.exists(projPath):
                 os.makedirs(projPath)
                 
-                subFolders = ['Art Depot', 'Game Engine Depot', 'Intemediate Depot', 'PMT Config']                
-                for subFolder in subFolders:
-                    os.makedirs(os.path.join(projPath, subFolder))
+                depots = ['Art Depot', 'Game Engine Depot', 'Intermediate Depot']
+                depotSubFolders = ['Characters', 'Environments', 'Props']
+                configFolder = 'PMT Config'
+
+                for depot in depots:
+                    depotPath = os.path.join(projPath, depot)
+                    os.makedirs(depotPath)
+                    
+                    for folder in depotSubFolders:
+                        os.makedirs(os.path.join(depotPath, folder))
+                        
+                configFolderPath = os.path.join(projPath, configFolder)
+                
+                os.makedirs(configFolderPath)
+                self.createPMTFile(configFolderPath, 'ProjectConfig.txt')
+                self.createPMTFile(configFolderPath, 'ProjectConfig.json')
                 
                 return True, f'Project folder created successfully.'
         except:
             raise RuntimeError('Could not create project folder')   
-    
         
+    def createPMTFile(self, folderName, fileName, content = None):
+        try:
+            if not fileName.startswith('PMT_'):
+                fileName = f'PMT_{fileName}'
+                
+            filePath = os.path.join(self.basePath, folderName, fileName)
+            
+            with open(filePath, 'w') as f:
+                if content:
+                    f.write(content)
+        except:
+            raise RuntimeError('Could not create PMT file')
