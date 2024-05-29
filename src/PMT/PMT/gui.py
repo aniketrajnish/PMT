@@ -1,3 +1,4 @@
+from tkinter import SE
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from pmt import PMT
@@ -7,40 +8,42 @@ class PMTWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.pmt = PMT()
-        self.explorer = QFileSystemModel()
-        self.tree = QTreeView()
+        self.projList = self.pmt.getProjects()
         self.initUI()
 
     def initUI(self):
         self.initWindow()
-        self.initLayouts()    
+        self.initLayouts()  
         self.initComponents()
         
     def initWindow(self):
         self.setWindowTitle('Makra\'s PMT')
         self.setWindowIcon(QIcon('Files/logo.png'))
         
-        self.setGeometry(300, 300, 600, 800)
+        self.setGeometry(300, 300, 600, 100)
         
         self.show()
         
     def initLayouts(self):
         self.centralWidget = QWidget()  
         self.setCentralWidget(self.centralWidget)  
-
-        self.mainLayout = QVBoxLayout(self.centralWidget)  
+        self.mainLayout = QVBoxLayout(self.centralWidget) 
+        
         self.createProjLayout = QHBoxLayout()
-        self.mainLayout.addLayout(self.createProjLayout)
+        self.createProjGb = QGroupBox('Create Project')
+        self.createProjGb.setFixedHeight(80)
+        self.createProjGb.setLayout(self.createProjLayout)
+        self.mainLayout.addWidget(self.createProjGb)  
         
         self.projListLayout = QVBoxLayout()
-        self.mainLayout.addLayout(self.projListLayout)
-        
-        self.mainLayout.addWidget(self.tree)
+        self.projListGb = QGroupBox('Existing Projects')
+        self.projListGb.setLayout(self.projListLayout)
+        self.mainLayout.addWidget(self.projListGb) 
         
     def initComponents(self):
         self.initStatusBar()
         self.initCreateProjGUI()
-        self.initFileExpGUI()
+        self.refreshProjListGUI()
         
     def initStatusBar(self):
         self.statusBar = QStatusBar()
@@ -71,29 +74,67 @@ class PMTWindow(QMainWindow):
                 self.statusBar.showMessage(msg)
                 
                 if success:
-                    self.pmt.refreshProjects()
+                    self.projList = self.pmt.getProjects()
+                    self.refreshProjListGUI()
             except Exception as e:
                 self.statusBar.showMessage(str(e))
         else:
-            self.statusBar.showMessage('Project name cannot be empty')
+            self.statusBar.showMessage('Project name cannot be empty')  
             
-    def initFileExpGUI(self):
-        self.tree.setModel(self.explorer)
-        self.tree.setSortingEnabled(True)
-        self.tree.setWindowTitle("Project Explorer")
-        
-        self.setupFileExp()
-        
-    def setupFileExp(self):
-        self.explorer.setRootPath(self.pmt.basePath)
-        self.tree.setRootIndex(self.explorer.index(self.pmt.basePath))
-        
-    def projSelected(self, item):
-        projPath = os.path.join(self.pmt.basePath, item.text())
-        self.openFileExplorer(projPath)
+    def refreshProjListGUI(self):
+        self.projList = self.pmt.getProjects()
 
-    def openFileExplorer(self, path):
-        self.explorer.setRootPath(path)
-        self.tree.setModel(self.explorer)
-        self.tree.setRootIndex(self.explorer.index(path))
-        self.tree.setSortingEnabled(True)
+        while self.projListLayout.count():
+            child = self.projListLayout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+                
+        for proj in self.projList:
+            projGb = QGroupBox(proj)
+            projGb.setFixedHeight(80)
+            projGbLayout = QHBoxLayout()
+            projGb.setLayout(projGbLayout)
+            
+            openBtn = QPushButton('Open', self)
+            openBtn.clicked.connect(lambda checked, proj=proj: self.openProj(proj))
+            projGbLayout.addWidget(openBtn)
+            
+            renameBtn = QPushButton('Rename', self)
+            renameBtn.clicked.connect(lambda checked, proj=proj: self.createRenameProjGUI(proj, projGbLayout))
+            projGbLayout.addWidget(renameBtn)
+            
+            deleteBtn = QPushButton('Delete', self)
+            deleteBtn.clicked.connect(lambda checked, proj=proj: self.deleteProj(proj))
+            projGbLayout.addWidget(deleteBtn)
+            
+            self.projListLayout.addWidget(projGb)
+            
+    def openProj(self, projName):
+        self.refreshProjListGUI()
+    
+    def createRenameProjGUI(self, projName, layout):
+        while layout.count() > 1:
+            child = layout.takeAt(1)
+            if child.widget():
+                child.widget().deleteLater()
+                
+        renameInput = QLineEdit(projName)
+        layout.addWidget(renameInput)
+        
+        confirmBtn = QPushButton('Confirm', self)
+        confirmBtn.clicked.connect(lambda checked, projName=projName, layout=layout: self.renameProj(renameInput.text().strip(), projName))
+        layout.addWidget(confirmBtn)
+        
+    def renameProj(self, newName, oldName):
+        if newName and newName != oldName:
+            success, msg = self.pmt.renameProject(oldName, newName)
+            self.statusBar.showMessage(msg)
+            if success:
+                self.refreshProjListGUI()
+        else:
+            self.statusBar.showMessage('Project name cannot be empty or same as the old name')
+    
+    def deleteProj(self, projName):
+        success, msg = self.pmt.deleteProject(projName)
+        self.statusBar.showMessage(msg)
+        self.refreshProjListGUI()      
