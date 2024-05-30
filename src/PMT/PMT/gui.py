@@ -1,7 +1,9 @@
-from tkinter import SE
+import re
+from tkinter import SE, SEL
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from pmt import PMT
+from functools import partial
 import os
 
 class PMTWindow(QMainWindow):
@@ -83,38 +85,38 @@ class PMTWindow(QMainWindow):
             
     def refreshProjListGUI(self):
         self.projList = self.pmt.getProjects()
-
+        
         while self.projListLayout.count():
             child = self.projListLayout.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
-                
+
         for proj in self.projList:
             projGb = QGroupBox(proj)
             projGb.setFixedHeight(80)
             projGbLayout = QHBoxLayout()
             projGb.setLayout(projGbLayout)
-            
+
             openBtn = QPushButton('Open', self)
-            openBtn.clicked.connect(lambda checked, proj=proj: self.openProj(proj))
+            openBtn.clicked.connect(partial(self.openProj, proj))
             projGbLayout.addWidget(openBtn)
-            
+
             renameBtn = QPushButton('Rename', self)
-            renameBtn.clicked.connect(lambda checked, proj=proj: self.createRenameProjGUI(proj, projGbLayout))
+            renameBtn.clicked.connect(partial(self.createRenameProjGUI, proj, projGbLayout))
             projGbLayout.addWidget(renameBtn)
-            
+
             deleteBtn = QPushButton('Delete', self)
-            deleteBtn.clicked.connect(lambda checked, proj=proj: self.deleteProj(proj))
+            deleteBtn.clicked.connect(partial(self.deleteProj, proj))
             projGbLayout.addWidget(deleteBtn)
-            
+
             self.projListLayout.addWidget(projGb)
             
     def openProj(self, projName):
         self.refreshProjListGUI()
     
     def createRenameProjGUI(self, projName, layout):
-        while layout.count() > 1:
-            child = layout.takeAt(1)
+        while layout.count():
+            child = layout.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
                 
@@ -124,6 +126,13 @@ class PMTWindow(QMainWindow):
         confirmBtn = QPushButton('Confirm', self)
         confirmBtn.clicked.connect(lambda checked, projName=projName, layout=layout: self.renameProj(renameInput.text().strip(), projName))
         layout.addWidget(confirmBtn)
+        
+        cancelBtn = QPushButton('Cancel', self)
+        cancelBtn.clicked.connect(lambda checked, layout=layout: self.refreshProjListGUI())
+        layout.addWidget(cancelBtn)
+        
+        renameInput.setFocus()
+        renameInput.selectAll()
         
     def renameProj(self, newName, oldName):
         if newName and newName != oldName:
