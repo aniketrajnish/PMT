@@ -112,7 +112,31 @@ class PMTWindow(QMainWindow):
             self.projListLayout.addWidget(projGb)
             
     def openProj(self, projName):
-        self.refreshProjListGUI()
+        while self.projListLayout.count():
+            child = self.projListLayout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+        
+        folderTypes = ['Maya', 'Substance', 'Game Engine']
+        
+        projGBox = QGroupBox(projName)
+        projGBoxLayout = QVBoxLayout()
+        projGBox.setLayout(projGBoxLayout)
+            
+        for folder in folderTypes:
+            gBox = QGroupBox(folder + ' Files')
+            gBoxLayout = QHBoxLayout()
+            gBox.setLayout(gBoxLayout)
+                
+            showEditBtn = QPushButton('Show/Edit Files', self)
+            gBoxLayout.addWidget(showEditBtn)
+                
+            createBtn = QPushButton('Create File', self)
+            gBoxLayout.addWidget(createBtn)
+            
+            projGBoxLayout.addWidget(gBox)  
+            
+        self.projListLayout.addWidget(projGBox)
     
     def createRenameProjGUI(self, projName, layout):
         while layout.count():

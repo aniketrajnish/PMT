@@ -75,7 +75,7 @@ class PMT:
         
     def getProjects(self):
         self.projects = [f for f in os.listdir(self.basePath) if os.path.isdir(os.path.join(self.basePath, f))]
-        return self.projects
+        return self.projects  
     
     def renameProject(self, oldName, newName):
         if not newName or newName.isspace():
@@ -102,7 +102,6 @@ class PMT:
         try:
             shutil.rmtree(projPath)
             self.getProjects()
-            return True, f'Project folder "{projName}" deleted successfully.'
+            return True, f'Project "{projName}" deleted successfully.'
         except Exception as e:
-            return False, f'Error deleting project folder "{projName}": {str(e)}'
-        
+            return False, f'Error deleting project "{projName}": {str(e)}'        
