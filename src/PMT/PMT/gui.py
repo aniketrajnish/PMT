@@ -2,6 +2,7 @@ import re
 from tkinter import SE, SEL
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
 from pmt import PMT
 from functools import partial
 import os
@@ -11,6 +12,7 @@ class PMTWindow(QMainWindow):
         super().__init__()
         self.pmt = PMT()
         self.projList = self.pmt.getProjects()
+        self.guiStateStack = []
         self.initUI()
 
     def initUI(self):
@@ -22,8 +24,7 @@ class PMTWindow(QMainWindow):
         self.setWindowTitle('Makra\'s PMT')
         self.setWindowIcon(QIcon('Files/logo.png'))
         
-        self.setGeometry(300, 300, 600, 100)
-        
+        self.setGeometry(300, 300, 600, 100)        
         self.show()
         
     def initLayouts(self):
@@ -35,17 +36,21 @@ class PMTWindow(QMainWindow):
         self.createProjGb = QGroupBox('Create Project')
         self.createProjGb.setFixedHeight(80)
         self.createProjGb.setLayout(self.createProjLayout)
-        self.mainLayout.addWidget(self.createProjGb)  
+        self.mainLayout.addWidget(self.createProjGb) 
         
         self.projListLayout = QVBoxLayout()
         self.projListGb = QGroupBox('Existing Projects')
         self.projListGb.setLayout(self.projListLayout)
-        self.mainLayout.addWidget(self.projListGb) 
+        self.mainLayout.addWidget(self.projListGb)    
+        
+        self.backLayout = QHBoxLayout()   
+        self.projListLayout.addLayout(self.backLayout)
         
     def initComponents(self):
         self.initStatusBar()
         self.initCreateProjGUI()
-        self.refreshProjListGUI()
+        self.initBackBtnGUI()
+        self.initExistingProjGUI()
         
     def initStatusBar(self):
         self.statusBar = QStatusBar()
@@ -55,7 +60,7 @@ class PMTWindow(QMainWindow):
             '  font-size: 8pt;' 
             '}'
         )
-        self.statusBar.showMessage('Write project name and click Create Project')
+        self.statusBar.showMessage('View/Create Projects')
         self.setStatusBar(self.statusBar)
         
     def initCreateProjGUI(self):
@@ -77,19 +82,24 @@ class PMTWindow(QMainWindow):
                 
                 if success:
                     self.projList = self.pmt.getProjects()
-                    self.refreshProjListGUI()
+                    self.initExistingProjGUI()
             except Exception as e:
                 self.statusBar.showMessage(str(e))
         else:
             self.statusBar.showMessage('Project name cannot be empty')  
             
-    def refreshProjListGUI(self):
-        self.projList = self.pmt.getProjects()
+    def initBackBtnGUI(self):        
+        self.backBtn = QPushButton('Back', self)
+        self.backBtn.setEnabled(False)
+        self.backBtn.clicked.connect(self.onBackBtnClick)
+        self.backLayout.addWidget(self.backBtn, alignment=Qt.AlignRight)
+            
+    def initExistingProjGUI(self):
+        self.clearExistingProjGUI()
+        self.pushGUIState(None)
+        self.backBtn.setEnabled(False)
         
-        while self.projListLayout.count():
-            child = self.projListLayout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+        self.projList = self.pmt.getProjects()
 
         for proj in self.projList:
             projGb = QGroupBox(proj)
@@ -112,10 +122,9 @@ class PMTWindow(QMainWindow):
             self.projListLayout.addWidget(projGb)
             
     def openProj(self, projName):
-        while self.projListLayout.count():
-            child = self.projListLayout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+        self.clearExistingProjGUI()
+        self.pushGUIState('Project')
+        self.backBtn.setEnabled(True)
         
         folderTypes = ['Maya', 'Substance', 'Game Engine']
         
@@ -124,25 +133,27 @@ class PMTWindow(QMainWindow):
         projGBox.setLayout(projGBoxLayout)
             
         for folder in folderTypes:
-            gBox = QGroupBox(folder + ' Files')
+            gBox = QGroupBox(folder + ' Assets')
+            gBox.setFixedHeight(80)
             gBoxLayout = QHBoxLayout()
             gBox.setLayout(gBoxLayout)
                 
-            showEditBtn = QPushButton('Show/Edit Files', self)
+            showEditBtn = QPushButton('Show/Edit Assets', self)
             gBoxLayout.addWidget(showEditBtn)
                 
-            createBtn = QPushButton('Create File', self)
+            createBtn = QPushButton('Create Asset', self)
             gBoxLayout.addWidget(createBtn)
             
             projGBoxLayout.addWidget(gBox)  
             
         self.projListLayout.addWidget(projGBox)
+        self.statusBar.showMessage('Opened project: ' + projName)
     
     def createRenameProjGUI(self, projName, layout):
-        while layout.count():
-            child = layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+        for i in range(layout.count()):
+            widget = layout.itemAt(i).widget()
+            if widget:
+                widget.setVisible(False)  
                 
         renameInput = QLineEdit(projName)
         layout.addWidget(renameInput)
@@ -152,7 +163,7 @@ class PMTWindow(QMainWindow):
         layout.addWidget(confirmBtn)
         
         cancelBtn = QPushButton('Cancel', self)
-        cancelBtn.clicked.connect(lambda checked, layout=layout: self.refreshProjListGUI())
+        cancelBtn.clicked.connect(lambda checked, layout=layout: self.initExistingProjGUI())
         layout.addWidget(cancelBtn)
         
         renameInput.setFocus()
@@ -163,11 +174,40 @@ class PMTWindow(QMainWindow):
             success, msg = self.pmt.renameProject(oldName, newName)
             self.statusBar.showMessage(msg)
             if success:
-                self.refreshProjListGUI()
+                self.initExistingProjGUI()
         else:
             self.statusBar.showMessage('Project name cannot be empty or same as the old name')
     
     def deleteProj(self, projName):
         success, msg = self.pmt.deleteProject(projName)
         self.statusBar.showMessage(msg)
-        self.refreshProjListGUI()      
+        self.initExistingProjGUI()      
+        
+    def clearExistingProjGUI(self):
+        while self.projListLayout.count() > 1:
+            child = self.projListLayout.takeAt(1)
+            if child.widget():
+                child.widget().deleteLater()
+                
+    def pushGUIState(self, state):
+        self.guiStateStack.append(state)
+        
+    def popGUIState(self):
+        if self.guiStateStack:
+            return self.guiStateStack.pop()
+        return None
+    
+    def restoreGUIState(self, state):
+        if state == 'Project':
+            self.initExistingProjGUI()
+        else:
+            self.openProj(state)
+    
+    def onBackBtnClick(self):
+        state = self.popGUIState()
+        self.backBtn.setEnabled(bool(self.guiStateStack))
+        if state:
+            self.restoreGUIState(state)            
+        else:
+            self.backBtn.setEnabled(False)
+            
