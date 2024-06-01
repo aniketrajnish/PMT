@@ -3,7 +3,7 @@ from tkinter import SE, SEL
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from pmt import PMT
+from pmt import PMT 
 from functools import partial
 import os
 
@@ -99,6 +99,7 @@ class PMTWindow(QMainWindow):
         self.pushGUIState(None)
         self.backBtn.setEnabled(False)
         
+        self.pmt.currProj = None
         self.projList = self.pmt.getProjects()
 
         for proj in self.projList:
@@ -128,6 +129,7 @@ class PMTWindow(QMainWindow):
         
         folderTypes = ['Maya', 'Substance', 'Game Engine']
         
+        self.pmt.currProj = projName
         projGBox = QGroupBox(projName)
         projGBoxLayout = QVBoxLayout()
         projGBox.setLayout(projGBoxLayout)
@@ -212,16 +214,15 @@ class PMTWindow(QMainWindow):
             self.backBtn.setEnabled(False) 
             
     def openAssetCreator(self):
-        self.createAssetDialog = CreateAssetDialog(self)
+        self.createAssetDialog = CreateAssetDialog(self, self.pmt)
         
         if self.createAssetDialog.exec_():
-            self.statusBar.showMessage('Opening Asset Creator...')
-        else:
-            self.statusBar.showMessage('Asset Creator closed.')
+            self.statusBar.showMessage('Opened Asset Creator!')
             
 class CreateAssetDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, pmt =None):
         super(CreateAssetDialog, self).__init__(parent)
+        self.pmt = pmt
         self.initUI()
         
     def initUI(self):
@@ -252,15 +253,16 @@ class CreateAssetDialog(QDialog):
         self.initCreateAssetBtnGUI()
         
     def initAssetNameGUI(self):
-        assetNameInput = QLineEdit(self)
-        assetNameInput.setPlaceholderText('Enter Asset Name...')
-        self.mainLayout.addWidget(assetNameInput)
+        self.assetNameInput = QLineEdit(self)
+        self.assetNameInput.setPlaceholderText('Enter Asset Name...')
+        self.mainLayout.addWidget(self.assetNameInput)
         
     def initAssetTypeGUI(self):        
         assetTypeLabel = QLabel('Select Asset Type:', self)
         self.assetTypeLayout.addWidget(assetTypeLabel)
         
-        self.charTypeRadioBtn = QRadioButton('Character', self)        
+        self.charTypeRadioBtn = QRadioButton('Character', self)   
+        self.charTypeRadioBtn.setChecked(True)
         self.propTypeRadioBtn = QRadioButton('Prop', self)
         self.envTypeRadioBtn = QRadioButton('Environment', self)        
         self.assetTypeLayout.addWidget(self.charTypeRadioBtn)
@@ -272,6 +274,7 @@ class CreateAssetDialog(QDialog):
         self.dccEngingeOptionsLayout.addWidget(dccEngineLabel)
         
         self.mayaCheck = QCheckBox('Maya', self)
+        self.mayaCheck.setChecked(True)
         self.substanceCheck = QCheckBox('Substance', self)
         self.unrealCheck = QCheckBox('Unreal', self)
         self.dccEngingeOptionsLayout.addWidget(self.mayaCheck)
@@ -280,6 +283,25 @@ class CreateAssetDialog(QDialog):
         
     def initCreateAssetBtnGUI(self):
         createAssetBtn = QPushButton('Create Asset', self)
-        # createAssetBtn.clicked.connect(self.onCreateAssetBtnClick)
+        createAssetBtn.clicked.connect(self.onCreateAssetBtnClick)
         self.mainLayout.addWidget(createAssetBtn)
         
+    def onCreateAssetBtnClick(self):
+        assetName = self.assetNameInput.text().strip()
+        
+        if not assetName:
+            self.statusBar.showMessage('Asset name cannot be empty')
+            return
+        
+        assetType = 'Characters' if self.charTypeRadioBtn.isChecked() else 'Props' if self.propTypeRadioBtn.isChecked() else 'Environments'        
+        
+        success, msg = self.pmt.createAsset(self.pmt.currProj, assetType, assetName, 
+                             useMaya = self.mayaCheck.isChecked(), 
+                             useSubstance = self.substanceCheck.isChecked(), 
+                             useUnreal = self.unrealCheck.isChecked())  
+        
+        if success:
+            QMessageBox.information(self, 'Success', msg)
+            self.accept()
+        else:
+            QMessageBox.critical(self, 'Error', msg)

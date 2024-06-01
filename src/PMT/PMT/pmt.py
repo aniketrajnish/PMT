@@ -7,6 +7,7 @@ class PMT:
     def __init__(self):
         self.initPaths()    
         
+        self.currProj = None
         self.projects = []
         self.getProjects()
         
@@ -104,4 +105,40 @@ class PMT:
             self.getProjects()
             return True, f'Project "{projName}" deleted successfully.'
         except Exception as e:
-            return False, f'Error deleting project "{projName}": {str(e)}'        
+            return False, f'Error deleting project "{projName}": {str(e)}'
+        
+    def createAsset(self, projName, assetType, assetName, useMaya=False, useSubstance=False, useUnreal=False):
+        prefix = {
+            'Characters' : 'char_',
+            'Environments' : 'env_',
+            'Props' : 'prop_'            
+            }.get(assetType, '')
+        
+        assetPath = os.path.join(self.basePath, projName, 'Art Depot', assetType, f'{prefix}{assetName}')
+        
+        try:
+            if not os.path.exists(assetPath):
+                os.makedirs(assetPath)
+                
+                if useMaya:
+                    mayaPath = os.path.join(assetPath, 'Maya')
+                    os.makedirs(mayaPath, exist_ok=True)
+                    with open(os.path.join(mayaPath, f'{assetName}.mb'), 'w') as f:
+                        f.write('')
+                if useSubstance:
+                    substancePath = os.path.join(assetPath, 'Substance')
+                    os.makedirs(substancePath, exist_ok=True)
+                    with open(os.path.join(substancePath, f'{assetName}.spp'), 'w') as f:
+                        f.write('')
+                if useUnreal:
+                    unrealPath = os.path.join(assetPath, 'Unreal')
+                    os.makedirs(unrealPath, exist_ok=True)
+                    with open(os.path.join(unrealPath, f'{assetName}.uasset'), 'w') as f:
+                        f.write('')
+                    
+                return True, f'Asset "{assetName}" created successfully.'
+            else:
+                return False, f'Asset "{assetName}" already exists.'
+        except Exception as e:
+            return False, f'Error creating asset: {str(e)}'
+        
