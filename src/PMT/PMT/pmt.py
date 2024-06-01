@@ -123,8 +123,8 @@ class PMT:
                 if useMaya:
                     mayaPath = os.path.join(assetPath, 'Maya')
                     os.makedirs(mayaPath, exist_ok=True)
-                    with open(os.path.join(mayaPath, f'{assetName}.mb'), 'w') as f:
-                        f.write('')
+                    with open(os.path.join(mayaPath, f'{assetName}.ma'), 'w') as f:
+                        f.write('//Maya ASCII 2024 scene\n')
                 if useSubstance:
                     substancePath = os.path.join(assetPath, 'Substance')
                     os.makedirs(substancePath, exist_ok=True)
@@ -141,4 +141,7 @@ class PMT:
                 return False, f'Asset "{assetName}" already exists.'
         except Exception as e:
             return False, f'Error creating asset: {str(e)}'
+        
+        def createMayaFile(self, projName, assetType, assetName):
+            pass
         
