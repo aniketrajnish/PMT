@@ -131,6 +131,10 @@ class PMTWindow(QMainWindow):
         projGBox = QGroupBox(projName)
         projGBoxLayout = QVBoxLayout()
         projGBox.setLayout(projGBoxLayout)
+        
+        createBtn = QPushButton('Create Asset', self)
+        createBtn.clicked.connect(self.openAssetCreator)
+        self.projListLayout.addWidget(createBtn)
             
         for folder in folderTypes:
             gBox = QGroupBox(folder + ' Assets')
@@ -140,10 +144,6 @@ class PMTWindow(QMainWindow):
                 
             showEditBtn = QPushButton('Show/Edit Assets', self)
             gBoxLayout.addWidget(showEditBtn)
-                
-            createBtn = QPushButton('Create Asset', self)
-            gBoxLayout.addWidget(createBtn)
-            
             projGBoxLayout.addWidget(gBox)  
             
         self.projListLayout.addWidget(projGBox)
@@ -209,5 +209,77 @@ class PMTWindow(QMainWindow):
         if state:
             self.restoreGUIState(state)            
         else:
-            self.backBtn.setEnabled(False)
+            self.backBtn.setEnabled(False) 
             
+    def openAssetCreator(self):
+        self.createAssetDialog = CreateAssetDialog(self)
+        
+        if self.createAssetDialog.exec_():
+            self.statusBar.showMessage('Opening Asset Creator...')
+        else:
+            self.statusBar.showMessage('Asset Creator closed.')
+            
+class CreateAssetDialog(QDialog):
+    def __init__(self, parent=None):
+        super(CreateAssetDialog, self).__init__(parent)
+        self.initUI()
+        
+    def initUI(self):
+        self.initWindow()
+        self.initLayouts()
+        self.initComponents()
+    
+    def initWindow(self):
+        self.setWindowTitle('Create Asset')
+        self.setWindowIcon(QIcon('Files/logo.png'))
+        
+        self.setGeometry(300, 300, 600, 100)        
+        self.show()
+        
+    def initLayouts(self):
+        self.mainLayout = QVBoxLayout(self)
+        
+        self.assetTypeLayout = QHBoxLayout()
+        self.mainLayout.addLayout(self.assetTypeLayout)     
+        
+        self.dccEngingeOptionsLayout = QHBoxLayout()
+        self.mainLayout.addLayout(self.dccEngingeOptionsLayout)
+        
+    def initComponents(self):
+        self.initAssetNameGUI()
+        self.initAssetTypeGUI()
+        self.initDccEngingeOptionsGUI()
+        self.initCreateAssetBtnGUI()
+        
+    def initAssetNameGUI(self):
+        assetNameInput = QLineEdit(self)
+        assetNameInput.setPlaceholderText('Enter Asset Name...')
+        self.mainLayout.addWidget(assetNameInput)
+        
+    def initAssetTypeGUI(self):        
+        assetTypeLabel = QLabel('Select Asset Type:', self)
+        self.assetTypeLayout.addWidget(assetTypeLabel)
+        
+        self.charTypeRadioBtn = QRadioButton('Character', self)        
+        self.propTypeRadioBtn = QRadioButton('Prop', self)
+        self.envTypeRadioBtn = QRadioButton('Environment', self)        
+        self.assetTypeLayout.addWidget(self.charTypeRadioBtn)
+        self.assetTypeLayout.addWidget(self.propTypeRadioBtn)
+        self.assetTypeLayout.addWidget(self.envTypeRadioBtn)
+        
+    def initDccEngingeOptionsGUI(self):
+        dccEngineLabel = QLabel('Select DCCs and Engine:', self)
+        self.dccEngingeOptionsLayout.addWidget(dccEngineLabel)
+        
+        self.mayaCheck = QCheckBox('Maya', self)
+        self.substanceCheck = QCheckBox('Substance', self)
+        self.unrealCheck = QCheckBox('Unreal', self)
+        self.dccEngingeOptionsLayout.addWidget(self.mayaCheck)
+        self.dccEngingeOptionsLayout.addWidget(self.substanceCheck)
+        self.dccEngingeOptionsLayout.addWidget(self.unrealCheck)        
+        
+    def initCreateAssetBtnGUI(self):
+        createAssetBtn = QPushButton('Create Asset', self)
+        # createAssetBtn.clicked.connect(self.onCreateAssetBtnClick)
+        self.mainLayout.addWidget(createAssetBtn)
+        
