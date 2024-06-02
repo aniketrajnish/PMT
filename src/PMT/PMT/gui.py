@@ -130,23 +130,22 @@ class PMTWindow(QMainWindow):
         folderTypes = ['Maya', 'Substance', 'Game Engine']
         
         self.pmt.currProj = projName
-        projGBox = QGroupBox(projName)
+        projGBox = QGroupBox(projName + ' Assets')
         projGBoxLayout = QVBoxLayout()
         projGBox.setLayout(projGBoxLayout)
         
         createBtn = QPushButton('Create Asset', self)
         createBtn.clicked.connect(self.openAssetCreator)
-        self.projListLayout.addWidget(createBtn)
+        projGBoxLayout.addWidget(createBtn)
+        
+        showEditgBox = QGroupBox('Show/Edit Assets')
+        showEditgBoxLayout = QVBoxLayout()
+        showEditgBox.setLayout(showEditgBoxLayout)
             
-        for folder in folderTypes:
-            gBox = QGroupBox(folder + ' Assets')
-            gBox.setFixedHeight(80)
-            gBoxLayout = QHBoxLayout()
-            gBox.setLayout(gBoxLayout)
-                
-            showEditBtn = QPushButton('Show/Edit Assets', self)
-            gBoxLayout.addWidget(showEditBtn)
-            projGBoxLayout.addWidget(gBox)  
+        for folder in folderTypes:  
+            showEditBtn = QPushButton(folder + ' Assets', self)
+            showEditgBoxLayout.addWidget(showEditBtn)
+            projGBoxLayout.addWidget(showEditgBox)  
             
         self.projListLayout.addWidget(projGBox)
         self.statusBar.showMessage('Opened project: ' + projName)
