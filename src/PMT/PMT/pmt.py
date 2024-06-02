@@ -114,7 +114,8 @@ class PMT:
             'Props' : 'prop_'            
             }.get(assetType, '')
         
-        assetPath = os.path.join(self.basePath, projName, 'Art Depot', assetType, f'{prefix}{assetName}')
+        assetPath = os.path.join(self.basePath, projName, 'Art Depot', assetType, f'{assetName}')
+        scriptDir = os.path.dirname(os.path.abspath(__file__))  
         
         try:
             if not os.path.exists(assetPath):
@@ -123,25 +124,30 @@ class PMT:
                 if useMaya:
                     mayaPath = os.path.join(assetPath, 'Maya')
                     os.makedirs(mayaPath, exist_ok=True)
-                    with open(os.path.join(mayaPath, f'{assetName}.ma'), 'w') as f:
+                    with open(os.path.join(mayaPath, f'{prefix}{assetName}.ma'), 'w') as f:
                         f.write('//Maya ASCII 2024 scene\n')
+                        
                 if useSubstance:
                     substancePath = os.path.join(assetPath, 'Substance')
-                    os.makedirs(substancePath, exist_ok=True)
-                    with open(os.path.join(substancePath, f'{assetName}.spp'), 'w') as f:
-                        f.write('')
+                    os.makedirs(substancePath, exist_ok=True)                    
+                                     
+                    srcSubstanceFilePath = os.path.join(scriptDir, 'Files', 'empty', 'emptySubstance.spp')
+                    destSubstanceFilePath = os.path.join(substancePath, f'{prefix}{assetName}.spp')
+                    
+                    shutil.copy(srcSubstanceFilePath, destSubstanceFilePath)
+                    
                 if useUnreal:
                     unrealPath = os.path.join(assetPath, 'Unreal')
                     os.makedirs(unrealPath, exist_ok=True)
-                    with open(os.path.join(unrealPath, f'{assetName}.uasset'), 'w') as f:
-                        f.write('')
+                    
+                    srcUnrealFilePath = os.path.join(scriptDir, 'Files', 'empty', 'emptyUnreal.uasset')
+                    destUnrealFilePath = os.path.join(unrealPath, f'{prefix}{assetName}.uasset')
+                    
+                    shutil.copy(srcUnrealFilePath, destUnrealFilePath)
                     
                 return True, f'Asset "{assetName}" created successfully.'
             else:
                 return False, f'Asset "{assetName}" already exists.'
         except Exception as e:
             return False, f'Error creating asset: {str(e)}'
-        
-        def createMayaFile(self, projName, assetType, assetName):
-            pass
         
