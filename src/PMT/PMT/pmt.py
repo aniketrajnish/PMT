@@ -1,29 +1,59 @@
+import datetime
 import os
 import shutil
 from tkinter import SEL
 from paths import Paths
+import json
 
 class PMT:
     def __init__(self):
-        self.initPaths()    
-        
+        self.initPaths()  
+        self.createBaseFolder()
         self.currProj = None
-        self.projects = []
+        self.projects = self.loadParentConfig()
         self.getProjects()
         
     def initPaths(self):
         self.basePath = Paths.getPath('parent')
+        self.parentConfigPath = os.path.join(self.basePath, 'PMT Config', 'PMT_ParentConfig.json')
         
     def createBaseFolder(self):
         try:
             if not os.path.exists(self.basePath):
-                os.makedirs(self.basePath)
+                os.makedirs(self.basePath)                
                 if os.name == 'nt':
                     os.system(f'attrib +h {self.basePath}')
                 return True, f'Base folder created at {self.basePath}'
+            
+            if not os.path.exists(self.parentConfigPath):
+                self.initParentConfig()
         except Exception as e:
             raise RuntimeError('C:/ drive not found')
+        
+    def initParentConfig(self):
+        configPath = os.path.join(self.basePath, 'PMT Config')
+        print(configPath)                          
+        
+        if not os.path.exists(configPath):
+            os.makedirs(configPath)
             
+        if not os.path.exists(self.parentConfigPath):
+            with open(self.parentConfigPath, 'w') as f:
+                json.dump({'Projects':{}}, f)
+            
+    def loadParentConfig(self):
+        try:
+            with open(self.parentConfigPath, 'r') as file:
+                data = json.load(file)
+                return data.get('Projects', {})
+        except FileNotFoundError:
+            return {}
+        
+    def saveParentConfig(self):
+        currentData = {'Projects': self.projects}
+        with open(self.parentConfigPath, 'w') as file:
+            json.dump(currentData, file, indent=4)
+        
     def createProjectFolder(self, projName):
         try:
             self.createBaseFolder()
@@ -43,11 +73,20 @@ class PMT:
                     for folder in depotSubFolders:
                         os.makedirs(os.path.join(depotPath, folder))
                         
-                configFolderPath = os.path.join(projPath, configFolder)
-                
+                configFolderPath = os.path.join(projPath, configFolder)                
                 os.makedirs(configFolderPath)
-                self.createPMTFile(projName, configFolderPath, 'ProjectConfig.txt')
-                self.createPMTFile(projName, configFolderPath, 'ProjectConfig.json')
+                
+                self.projects[projName] = {
+                        'creationDate' : datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'path' : projPath,
+                        'Asset Count' : 0
+                    }
+                
+                self.saveParentConfig()
+                
+                projectConfigPath = os.path.join(configFolderPath, f'PMT_{projName}_Config.json')
+                with open(projectConfigPath, 'w') as f:
+                    json.dump({'Assets': {}}, f)
                 
                 self.getProjects()
                 
@@ -58,26 +97,19 @@ class PMT:
         except OSError as e:
             return False, f"Failed to create the project: {e.strerror}"
         except Exception as e:
-            return False, f"An unexpected error occurred: {str(e)}" 
-        
-    def createPMTFile(self, projectName, folderPath, fileName, content=None):
-        try:
-            if not fileName.startswith('PMT_'):
-                fileName = f'PMT_{projectName}_{fileName}'
-
-            filePath = os.path.join(folderPath, fileName)
-
-            with open(filePath, 'w') as f:
-                if content:
-                    f.write(content)
-            return True, f'File "{fileName}" created successfully at "{filePath}"'
-        except Exception as e:
-            raise RuntimeError(f'Could not create PMT file: {e}')
+            return False, f"An unexpected error occurred: {str(e)}"    
         
     def getProjects(self):
-        self.projects = [f for f in os.listdir(self.basePath) if os.path.isdir(os.path.join(self.basePath, f))]
-        return self.projects  
-    
+        try :
+            with open(self.parentConfigPath, 'r') as file:
+                data = json.load(file)
+                self.projects = data.get('Projects', {})
+            return list(self.projects.keys())
+        except FileNotFoundError:
+            return []
+        except json.JSONDecodeError:
+            return []
+            
     def renameProject(self, oldName, newName):
         if not newName or newName.isspace():
             return False, "Project name cannot be empty."
@@ -90,6 +122,9 @@ class PMT:
                 return False, f'Project "{newName}" already exists.'
 
             os.rename(oldPath, newPath)
+            self.projects[newName] = self.projects.pop(oldName)
+            self.projects[newName]['path'] = newPath
+            self.saveParentConfig()
             
             self.getProjects()
             
@@ -102,12 +137,18 @@ class PMT:
         projPath = os.path.join(self.basePath, projName)
         try:
             shutil.rmtree(projPath)
+            
+            del self.projects[projName]
+            self.saveParentConfig()
             self.getProjects()
+            
             return True, f'Project "{projName}" deleted successfully.'
         except Exception as e:
             return False, f'Error deleting project "{projName}": {str(e)}'
         
     def createAsset(self, projName, assetType, assetName, useMaya=False, useSubstance=False, useUnreal=False):
+        projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')
+        
         prefix = {
             'Characters' : 'char_',
             'Environments' : 'env_',
@@ -119,7 +160,7 @@ class PMT:
         
         try:
             if not os.path.exists(assetPath):
-                os.makedirs(assetPath)
+                os.makedirs(assetPath)              
                 
                 if useMaya:
                     mayaPath = os.path.join(assetPath, 'Maya')
@@ -144,6 +185,20 @@ class PMT:
                     destUnrealFilePath = os.path.join(unrealPath, f'{prefix}{assetName}.uasset')
                     
                     shutil.copy(srcUnrealFilePath, destUnrealFilePath)
+                    
+                with open(projConfigPath, 'r') as f:
+                    data = json.load(f)
+                    data['Assets'][f'{assetName}'] = {
+                        'creationDate' : datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'type' : assetType,
+                        'path' : assetPath,
+                        'Maya' : '2024' if useMaya else 'NA',
+                        'Substance' : '2023' if useSubstance else 'NA',
+                        'Unreal' : '5.3' if useUnreal else 'NA'
+                    }
+                
+                with open(projConfigPath, 'w') as f:
+                    json.dump(data, f, indent=4)
                     
                 return True, f'Asset "{assetName}" created successfully.'
             else:
