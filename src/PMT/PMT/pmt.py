@@ -113,23 +113,29 @@ class PMT:
     def renameProject(self, oldName, newName):
         if not newName or newName.isspace():
             return False, "Project name cannot be empty."
-    
+
         try:
             oldPath = os.path.join(self.basePath, oldName)
             newPath = os.path.join(self.basePath, newName)
-            
+        
+            oldConfigPath = os.path.join(oldPath, 'PMT Config', f'PMT_{oldName}_Config.json')
+            newConfigPath = os.path.join(oldPath, 'PMT Config', f'PMT_{newName}_Config.json')
+
             if os.path.exists(newPath):
                 return False, f'Project "{newName}" already exists.'
 
-            os.rename(oldPath, newPath)
+            if os.path.exists(oldConfigPath):
+                os.rename(oldConfigPath, newConfigPath)
+                os.rename(oldPath, newPath)
+        
             self.projects[newName] = self.projects.pop(oldName)
             self.projects[newName]['path'] = newPath
             self.saveParentConfig()
-            
-            self.getProjects()
-            
-            return True, f'Project "{oldName}" renamed to "{newName}" successfully.'
         
+            self.getProjects()
+        
+            return True, f'Project "{oldName}" renamed to "{newName}" successfully.'
+    
         except Exception as e:
             return False, f'Failed to rename project: {str(e)}'
     
