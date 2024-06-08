@@ -172,6 +172,7 @@ class PMTWindow(QMainWindow):
                 deleteBtn = QPushButton('Delete', self)
             
                 deleteBtn.clicked.connect(partial(self.delAsset, projName, assetName, dccType))
+                copyMoveBtn.clicked.connect(self.openCopyMoveDialog)
         
                 assetBoxLayout.addWidget(openBtn)
                 assetBoxLayout.addWidget(copyMoveBtn)
@@ -253,6 +254,12 @@ class PMTWindow(QMainWindow):
         
         if self.createAssetDialog.exec_():
             self.statusBar.showMessage('Opened Asset Creator!')
+            
+    def openCopyMoveDialog(self):
+        self.copyMoveDialog = CopyMoveDialog(self, self.pmt)
+        
+        if self.copyMoveDialog.exec_():
+            self.statusBar.showMessage('Opened Copy/Move Dialog!')
             
     def delAsset(self, projName, assetName, dccType):
         success, msg = self.pmt.deleteAsset(projName, assetName, dccType)
@@ -348,3 +355,64 @@ class CreateAssetDialog(QDialog):
             self.accept()
         else:
             QMessageBox.critical(self, 'Error', msg)
+            
+class CopyMoveDialog(QDialog):
+    def __init__(self, parent=None, pmt =None):
+        super(CopyMoveDialog, self).__init__(parent)
+        self.pmt = pmt
+        self.initUI()
+        
+    def initUI(self):
+        self.initWindow()
+        self.initLayouts()
+        self.initComponents()
+    
+    def initWindow(self):
+        self.setWindowTitle('Copy/Move Asset')
+        self.setWindowIcon(QIcon('Files/logo.png'))
+        
+        self.setGeometry(300, 300, 300, 600)
+        self.show()
+        
+    def initLayouts(self):
+        self.mainLayout = QVBoxLayout(self)
+        self.opTypeLayout = QHBoxLayout()
+        self.projListLayout = QVBoxLayout()
+        self.mainLayout.addLayout(self.opTypeLayout)
+        self.mainLayout.addLayout(self.projListLayout)
+        
+    def initComponents(self):
+        self.initProjListGUI()
+        self.initCopyMoveBtnGUI()
+        self.initOpTypeGUI()
+        
+    def initOpTypeGUI(self):
+        self.copyRadioBtn = QRadioButton('Copy', self)
+        self.copyRadioBtn.toggled.connect(self.updateBtn)
+        self.copyRadioBtn.setChecked(True)
+        
+        self.moveRadioBtn = QRadioButton('Move', self)
+        self.moveRadioBtn.toggled.connect(self.updateBtn)
+        
+        self.opTypeLayout.addWidget(self.copyRadioBtn)
+        self.opTypeLayout.addWidget(self.moveRadioBtn)
+        
+    def initProjListGUI(self):
+        self.projList = self.pmt.getProjects()
+        self.projChkBoxes = []
+        
+        for proj in self.projList:
+            if proj != self.pmt.currProj:
+                projCheck = QCheckBox(proj, self)
+                self.projListLayout.addWidget(projCheck)
+                self.projChkBoxes.append(projCheck)
+                
+    def initCopyMoveBtnGUI(self):
+        self.copyMoveBtn = QPushButton('Copy/Move', self)
+        self.mainLayout.addWidget(self.copyMoveBtn)
+        
+    def updateBtn(self):
+        if self.copyRadioBtn.isChecked():
+            self.copyMoveBtn.setText('Copy')
+        else:
+            self.copyMoveBtn.setText('Move')
