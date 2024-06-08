@@ -126,29 +126,65 @@ class PMTWindow(QMainWindow):
         self.clearExistingProjGUI()
         self.pushGUIState('Project')
         self.backBtn.setEnabled(True)
-        
-        folderTypes = ['Maya', 'Substance', 'Game Engine']
-        
+    
         self.pmt.currProj = projName
+        print(self.pmt.currProj)
         projGBox = QGroupBox(projName + ' Assets')
         projGBoxLayout = QVBoxLayout()
         projGBox.setLayout(projGBoxLayout)
-        
+    
         createBtn = QPushButton('Create Asset', self)
         createBtn.clicked.connect(self.openAssetCreator)
-        projGBoxLayout.addWidget(createBtn)
+        self.projListLayout.addWidget(createBtn)
+    
+        dccTypes = ['Maya', 'Substance', 'Unreal']
+    
+        for dcc in dccTypes:
+            dccBtn = QPushButton(f'{dcc} Assets', self)
+            dccBtn.clicked.connect(partial(self.showAssets, projName, dcc))
+            projGBoxLayout.addWidget(dccBtn)
         
-        showEditgBox = QGroupBox('Show/Edit Assets')
-        showEditgBoxLayout = QVBoxLayout()
-        showEditgBox.setLayout(showEditgBoxLayout)
-            
-        for folder in folderTypes:  
-            showEditBtn = QPushButton(folder + ' Assets', self)
-            showEditgBoxLayout.addWidget(showEditBtn)
-            projGBoxLayout.addWidget(showEditgBox)  
-            
         self.projListLayout.addWidget(projGBox)
-        self.statusBar.showMessage('Opened project: ' + projName)
+        self.statusBar.showMessage(f'Opened Project: {projName}')          
+
+    def showAssets(self, projName, dccType):
+        assets = self.pmt.getAssets(projName=projName, dccType=dccType) 
+        self.clearExistingProjGUI()
+        self.pushGUIState(dccType)
+
+        projGBox = QGroupBox(f'{projName} - {dccType} Assets')
+        projGBoxLayout = QVBoxLayout()
+        projGBox.setLayout(projGBoxLayout)
+    
+        for assetName, assetDetails in assets.items(): 
+            if assetDetails[dccType] != 'NA':
+                assetBoxName = f'{assetName} - {assetDetails[dccType]["filename"]}'
+            else:
+                assetBoxName = f'{assetName} - No {dccType} Asset'
+        
+            assetBox = QGroupBox(assetBoxName)
+            assetBoxLayout = QHBoxLayout()
+            assetBox.setLayout(assetBoxLayout)
+        
+            if assetDetails[dccType] != 'NA':
+                openBtn = QPushButton('Open', self)
+                copyMoveBtn = QPushButton('Copy/Move', self)
+                deleteBtn = QPushButton('Delete', self)
+            
+                deleteBtn.clicked.connect(partial(self.delAsset, projName, assetName, dccType))
+        
+                assetBoxLayout.addWidget(openBtn)
+                assetBoxLayout.addWidget(copyMoveBtn)
+                assetBoxLayout.addWidget(deleteBtn)
+            else:
+                createBtn = QPushButton(f'Create {dccType} Asset', self)
+                assetBoxLayout.addWidget(createBtn)
+        
+            projGBoxLayout.addWidget(assetBox)
+
+        self.projListLayout.addWidget(projGBox)
+        self.statusBar.showMessage(f'Opened {dccType} Assets for Project: {projName}') 
+          
     
     def createRenameProjGUI(self, projName, layout):
         for i in range(layout.count()):
@@ -202,7 +238,7 @@ class PMTWindow(QMainWindow):
         if state == 'Project':
             self.initExistingProjGUI()
         else:
-            self.openProj(state)
+            self.openProj(self.pmt.currProj)
     
     def onBackBtnClick(self):
         state = self.popGUIState()
@@ -217,6 +253,14 @@ class PMTWindow(QMainWindow):
         
         if self.createAssetDialog.exec_():
             self.statusBar.showMessage('Opened Asset Creator!')
+            
+    def delAsset(self, projName, assetName, dccType):
+        success, msg = self.pmt.deleteAsset(projName, assetName, dccType)
+        if success:
+            self.statusBar.showMessage(msg)
+            self.showAssets(projName, dccType)
+        else:
+            self.statusBar.showMessage(msg)
             
 class CreateAssetDialog(QDialog):
     def __init__(self, parent=None, pmt =None):

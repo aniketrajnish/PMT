@@ -154,61 +154,109 @@ class PMT:
         
     def createAsset(self, projName, assetType, assetName, useMaya=False, useSubstance=False, useUnreal=False):
         projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')
-        
         prefix = {
-            'Characters' : 'char_',
-            'Environments' : 'env_',
-            'Props' : 'prop_'            
-            }.get(assetType, '')
-        
-        assetPath = os.path.join(self.basePath, projName, 'Art Depot', assetType, f'{assetName}')
+            'Characters': 'char_',
+            'Environments': 'env_',
+            'Props': 'prop_'
+        }.get(assetType, '')
+
+        assetPath = os.path.join(self.basePath, projName, 'Art Depot', assetType, assetName)
         scriptDir = os.path.dirname(os.path.abspath(__file__))  
-        
+
         try:
             if not os.path.exists(assetPath):
-                os.makedirs(assetPath)              
-                
+                os.makedirs(assetPath)
+
+                assetDetails = {}
+            
                 if useMaya:
                     mayaPath = os.path.join(assetPath, 'Maya')
                     os.makedirs(mayaPath, exist_ok=True)
-                    with open(os.path.join(mayaPath, f'{prefix}{assetName}.ma'), 'w') as f:
-                        f.write('//Maya ASCII 2024 scene\n')
-                        
+                    mayaFilename = f'{prefix}{assetName}.ma'
+                    with open(os.path.join(mayaPath, mayaFilename), 'w') as f:
+                        f.write('// Maya ASCII 2024 scene\n')
+                    assetDetails['Maya'] = {'filename': mayaFilename, 'version': '2024'}
+
                 if useSubstance:
                     substancePath = os.path.join(assetPath, 'Substance')
-                    os.makedirs(substancePath, exist_ok=True)                    
-                                     
-                    srcSubstanceFilePath = os.path.join(scriptDir, 'Files', 'empty', 'emptySubstance.spp')
-                    destSubstanceFilePath = os.path.join(substancePath, f'{prefix}{assetName}.spp')
-                    
-                    shutil.copy(srcSubstanceFilePath, destSubstanceFilePath)
-                    
+                    os.makedirs(substancePath, exist_ok=True)
+                    substanceFilename = f'{prefix}{assetName}.spp'
+                    shutil.copy(os.path.join(scriptDir, 'Files', 'empty', 'emptySubstance.spp'), os.path.join(substancePath, substanceFilename))
+                    assetDetails['Substance'] = {'filename': substanceFilename, 'version': '2023'}
+
                 if useUnreal:
                     unrealPath = os.path.join(assetPath, 'Unreal')
                     os.makedirs(unrealPath, exist_ok=True)
+                    unrealFilename = f'{prefix}{assetName}.uasset'
+                    shutil.copy(os.path.join(scriptDir, 'Files', 'empty', 'emptyUnreal.uasset'), os.path.join(unrealPath, unrealFilename))
+                    assetDetails['Unreal'] = {'filename': unrealFilename, 'version': '5.3'}
                     
-                    srcUnrealFilePath = os.path.join(scriptDir, 'Files', 'empty', 'emptyUnreal.uasset')
-                    destUnrealFilePath = os.path.join(unrealPath, f'{prefix}{assetName}.uasset')
-                    
-                    shutil.copy(srcUnrealFilePath, destUnrealFilePath)
+                for dcc in ['Maya', 'Substance', 'Unreal']:
+                    if dcc not in assetDetails:
+                        assetDetails[dcc] = 'NA'
                     
                 with open(projConfigPath, 'r') as f:
                     data = json.load(f)
-                    data['Assets'][f'{assetName}'] = {
-                        'creationDate' : datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                        'type' : assetType,
-                        'path' : assetPath,
-                        'Maya' : '2024' if useMaya else 'NA',
-                        'Substance' : '2023' if useSubstance else 'NA',
-                        'Unreal' : '5.3' if useUnreal else 'NA'
+                    data['Assets'][assetName] = {
+                        'creationDate': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'type': assetType,
+                        'path': assetPath,
+                        **assetDetails
                     }
                 
                 with open(projConfigPath, 'w') as f:
                     json.dump(data, f, indent=4)
-                    
+                
                 return True, f'Asset "{assetName}" created successfully.'
             else:
                 return False, f'Asset "{assetName}" already exists.'
         except Exception as e:
             return False, f'Error creating asset: {str(e)}'
+
         
+    def getAssets(self, projName, dccType):
+        projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')            
+        try:
+            with open(projConfigPath, 'r') as file:
+                data = json.load(file)
+                return data.get('Assets', {})
+        except Exception as e:
+            print(f"Failed to read project data: {e}")
+            return {}
+        
+    def deleteAsset(self, projName, assetName, dccType):
+        projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')
+        assetDeleted = False
+        
+        try:
+            with open(projConfigPath, 'r') as f:
+                data = json.load(f)
+            
+            if assetName in data['Assets'] and dccType in data['Assets'][assetName]:
+                assetPath = data['Assets'][assetName]['path']
+                dccPath = os.path.join(assetPath, dccType)
+                msg = ''
+                
+                if os.path.exists(dccPath):
+                    shutil.rmtree(dccPath)
+                    assetDeleted = True
+                    msg = "Deleted {dccType} asset: {assetName}"
+                    data['Assets'][assetName][dccType] = 'NA'
+                    
+                if os.path.exists(assetPath) and len(os.listdir(assetPath)) == 0:
+                    shutil.rmtree(assetPath)
+                    msg = f"Deleted entire asset: {assetName}"
+                    del data['Assets'][assetName]
+                    
+                with open(projConfigPath, 'w') as f:
+                    json.dump(data, f, indent=4)
+                
+                return True, msg
+            else:
+                return False, f'Asset "{assetName}" not found.'
+            
+        except Exception as e:
+            return False, f'Error deleting asset: {str(e)}'       
+        
+            
+                    
