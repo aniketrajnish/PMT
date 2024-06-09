@@ -320,8 +320,40 @@ class PMT:
                 return False, f'Error moving asset: {str(e)}'
             else:
                 return False, f'Error copying asset: {str(e)}'
-
             
+    def renameAsset(self, projName, oldAssetName, newAssetName):
+        projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')
+        try:
+            with open(projConfigPath, 'r') as f:
+                data = json.load(f)
         
+            if oldAssetName not in data['Assets']:
+                return False, f'Asset "{oldAssetName}" not found.'
+        
+            assetDetails = data['Assets'].pop(oldAssetName)
+            oldAssetPath = assetDetails['path']
+            newAssetPath = oldAssetPath.replace(oldAssetName, newAssetName)
+        
+            os.rename(oldAssetPath, newAssetPath)
+        
+            for dcc in ['Maya', 'Substance', 'Unreal']:
+                if assetDetails[dcc] != 'NA':
+                    dccDetails = assetDetails[dcc]
+                    oldFilename = dccDetails['filename']
+                    newFilename = oldFilename.replace(oldAssetName, newAssetName)
+                    dccDetails['filename'] = newFilename 
+                
+                    oldFilePath = os.path.join(newAssetPath, dcc, oldFilename)
+                    newFilePath = os.path.join(newAssetPath, dcc, newFilename)
+                    os.rename(oldFilePath, newFilePath)
+
+            assetDetails['path'] = newAssetPath
+            data['Assets'][newAssetName] = assetDetails
+        
+            with open(projConfigPath, 'w') as f:
+                json.dump(data, f, indent=4)
             
-                    
+            return True, f'Asset "{oldAssetName}" renamed to "{newAssetName}" successfully.'
+    
+        except Exception as e:
+            return False, f'Error renaming asset: {str(e)}'

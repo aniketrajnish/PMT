@@ -170,14 +170,17 @@ class PMTWindow(QMainWindow):
                 openBtn = QPushButton('Open', self)
                 renameBtn = QPushButton('Rename', self)
                 copyMoveBtn = QPushButton('Copy/Move', self)
+                exportBtn = QPushButton('Export', self)
                 deleteBtn = QPushButton('Delete', self)
             
                 deleteBtn.clicked.connect(partial(self.delAsset, projName, assetName, dccType))
-                copyMoveBtn.clicked.connect(partial(self.openCopyMoveDialog, assetName))
+                copyMoveBtn.clicked.connect(partial(self.openCopyMoveAssetDialog, assetName))
+                renameBtn.clicked.connect(partial(self.openRenameAssetDialog, assetName))
         
                 assetBoxLayout.addWidget(openBtn)
                 assetBoxLayout.addWidget(renameBtn)
                 assetBoxLayout.addWidget(copyMoveBtn)
+                assetBoxLayout.addWidget(exportBtn)
                 assetBoxLayout.addWidget(deleteBtn)
             else:
                 createBtn = QPushButton(f'Create {dccType} Asset', self)
@@ -186,8 +189,7 @@ class PMTWindow(QMainWindow):
             projGBoxLayout.addWidget(assetBox)
 
         self.projListLayout.addWidget(projGBox)
-        self.statusBar.showMessage(f'Opened {dccType} Assets for Project: {projName}') 
-          
+        self.statusBar.showMessage(f'Opened {dccType} Assets for Project: {projName}')           
     
     def createRenameProjGUI(self, projName, layout):
         for i in range(layout.count()):
@@ -257,12 +259,19 @@ class PMTWindow(QMainWindow):
         if self.createAssetDialog.exec_():
             self.statusBar.showMessage('Opened Asset Creator!')
             
-    def openCopyMoveDialog(self, currAsset):
+    def openCopyMoveAssetDialog(self, currAsset):
         self.pmt.currAsset = currAsset
-        self.copyMoveDialog = CopyMoveDialog(self, self.pmt)
+        self.copyMoveAssetDialog = CopyMoveAssetDialog(self, self.pmt)
         
-        if self.copyMoveDialog.exec_():
+        if self.copyMoveAssetDialog.exec_():
             self.statusBar.showMessage('Opened Copy/Move Dialog!')
+            
+    def openRenameAssetDialog(self, currAsset):
+        self.pmt.currAsset = currAsset
+        self.renameAssetDialog = RenameAssetDialog(self, self.pmt)
+        
+        if self.renameAssetDialog.exec_():
+            self.statusBar.showMessage('Opened Rename Dialog!')
             
     def delAsset(self, projName, assetName, dccType):
         success, msg = self.pmt.deleteAsset(projName, assetName, dccType)
@@ -359,9 +368,9 @@ class CreateAssetDialog(QDialog):
         else:
             QMessageBox.critical(self, 'Error', msg)
             
-class CopyMoveDialog(QDialog):
+class CopyMoveAssetDialog(QDialog):
     def __init__(self, parent=None, pmt =None):
-        super(CopyMoveDialog, self).__init__(parent)
+        super(CopyMoveAssetDialog, self).__init__(parent)
         self.pmt = pmt
         self.initUI()
         
@@ -439,4 +448,67 @@ class CopyMoveDialog(QDialog):
             self.accept()
         else:
             QMessageBox.critical(self, 'Error', msg)
-
+            
+class RenameAssetDialog(QDialog):
+    def __init__(self, parent=None, pmt =None):
+        super(RenameAssetDialog, self).__init__(parent)
+        self.pmt = pmt
+        self.initUI()
+        
+    def initUI(self):
+        self.initWindow()
+        self.initLayouts()
+        self.initComponents()
+    
+    def initWindow(self):
+        self.setWindowTitle('Rename Asset')
+        self.setWindowIcon(QIcon('Files/logo.png'))
+        
+        self.setGeometry(300, 300, 275, 100)
+        self.show()
+        
+    def initLayouts(self):
+        self.mainLayout = QVBoxLayout(self)
+        self.renameTextLayout = QHBoxLayout()
+        self.mainLayout.addLayout(self.renameTextLayout)       
+        
+    def initComponents(self):
+        self.initRenameTextGUI()
+        self.initRenameBtnGUI()
+        pass
+    
+    def initRenameTextGUI(self): 
+        nameLabel = QLabel('New Name:', self)
+        self.assetNameInput = QLineEdit(self.pmt.currAsset)
+        
+        self.assetNameInput.setFocus()
+        self.assetNameInput.selectAll()
+        
+        self.renameTextLayout.addWidget(nameLabel)
+        self.renameTextLayout.addWidget(self.assetNameInput)
+        
+    def initRenameBtnGUI(self):
+        self.renameBtn = QPushButton('Rename', self)
+        self.renameBtn.clicked.connect(self.onRenameBtnClick)
+        self.mainLayout.addWidget(self.renameBtn)
+    
+    def onRenameBtnClick(self):
+        newAssetName = self.assetNameInput.text().strip()
+        
+        if newAssetName == self.pmt.currAsset:
+            QMessageBox.warning(self, 'Warning', 'New name cannot be same as the old name.')
+            return
+        
+        if not newAssetName:
+            QMessageBox.warning(self, 'Warning', 'New name cannot be empty.')
+            return
+        
+        success, msg = self.pmt.renameAsset(self.pmt.currProj, self.pmt.currAsset, newAssetName)
+        
+        if success:
+            QMessageBox.information(self, 'Success', msg)
+            self.pmt.currAsset = newAssetName
+            self.accept()
+        else:
+            QMessageBox.critical(self, 'Error', msg)
+            
