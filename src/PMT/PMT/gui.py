@@ -137,7 +137,7 @@ class PMTWindow(QMainWindow):
         createBtn.clicked.connect(self.openAssetCreator)
         self.projListLayout.addWidget(createBtn)
     
-        dccTypes = ['Maya', 'Substance', 'Unreal']
+        dccTypes = ['Maya', 'Substance']
     
         for dcc in dccTypes:
             dccBtn = QPushButton(f'{dcc} Assets', self)
@@ -159,7 +159,6 @@ class PMTWindow(QMainWindow):
         for assetName, assetDetails in assets.items(): 
             if assetDetails[dccType] != 'NA':
                 assetBoxName = f'{assetName} - {assetDetails[dccType]["filename"]}'
-                assetFullPath = os.path.join(assetDetails["path"], dccType, assetDetails[dccType]["filename"])
             else:
                 assetBoxName = f'{assetName} - No {dccType} Asset'
         
@@ -174,10 +173,10 @@ class PMTWindow(QMainWindow):
                 exportBtn = QPushButton('Export', self)
                 deleteBtn = QPushButton('Delete', self)
                 
-                openBtn.clicked.connect(partial(self.openAsset, assetFullPath))            
+                openBtn.clicked.connect(partial(self.openAsset, os.path.join(assetDetails["path"], dccType, assetDetails[dccType]["filename"]), dccType))            
                 deleteBtn.clicked.connect(partial(self.delAsset, projName, assetName, dccType))
                 copyMoveBtn.clicked.connect(partial(self.openCopyMoveAssetDialog, assetName))
-                renameBtn.clicked.connect(partial(self.openRenameAssetDialog, assetName))
+                renameBtn.clicked.connect(partial(self.openRenameAssetDialog, assetName, dccType))
         
                 assetBoxLayout.addWidget(openBtn)
                 assetBoxLayout.addWidget(renameBtn)
@@ -268,12 +267,13 @@ class PMTWindow(QMainWindow):
         if self.copyMoveAssetDialog.exec_():
             self.statusBar.showMessage('Opened Copy/Move Dialog!')
             
-    def openRenameAssetDialog(self, currAsset):
+    def openRenameAssetDialog(self, currAsset, dccType):
         self.pmt.currAsset = currAsset
         self.renameAssetDialog = RenameAssetDialog(self, self.pmt)
         
         if self.renameAssetDialog.exec_():
             self.statusBar.showMessage('Opened Rename Dialog!')
+            self.showAssets(self.pmt.currProj, dccType)
             
     def delAsset(self, projName, assetName, dccType):
         success, msg = self.pmt.deleteAsset(projName, assetName, dccType)
@@ -283,8 +283,8 @@ class PMTWindow(QMainWindow):
         else:
             self.statusBar.showMessage(msg)
             
-    def openAsset(self, assetPath):
-        success, msg = self.pmt.openAsset(assetPath)
+    def openAsset(self, assetPath, dccType):
+        success, msg = self.pmt.openAsset(assetPath)        
         self.statusBar.showMessage(msg)
             
 class CreateAssetDialog(QDialog):
@@ -343,11 +343,9 @@ class CreateAssetDialog(QDialog):
         
         self.mayaCheck = QCheckBox('Maya', self)
         self.mayaCheck.setChecked(True)
-        self.substanceCheck = QCheckBox('Substance', self)
-        self.unrealCheck = QCheckBox('Unreal', self)
+        self.substanceCheck = QCheckBox('Substance', self)        
         self.dccEngingeOptionsLayout.addWidget(self.mayaCheck)
-        self.dccEngingeOptionsLayout.addWidget(self.substanceCheck)
-        self.dccEngingeOptionsLayout.addWidget(self.unrealCheck)        
+        self.dccEngingeOptionsLayout.addWidget(self.substanceCheck)    
         
     def initCreateAssetBtnGUI(self):
         createAssetBtn = QPushButton('Create Asset', self)
@@ -365,9 +363,7 @@ class CreateAssetDialog(QDialog):
         
         success, msg = self.pmt.createAsset(self.pmt.currProj, assetType, assetName, 
                              useMaya = self.mayaCheck.isChecked(), 
-                             useSubstance = self.substanceCheck.isChecked(), 
-                             useUnreal = self.unrealCheck.isChecked())  
-        
+                             useSubstance = self.substanceCheck.isChecked())
         if success:
             QMessageBox.information(self, 'Success', msg)
             self.accept()

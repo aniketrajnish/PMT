@@ -153,7 +153,7 @@ class PMT:
         except Exception as e:
             return False, f'Error deleting project "{projName}": {str(e)}'
         
-    def createAsset(self, projName, assetType, assetName, useMaya=False, useSubstance=False, useUnreal=False):
+    def createAsset(self, projName, assetType, assetName, useMaya=False, useSubstance=False):
         projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')
         prefix = {
             'Characters': 'char_',
@@ -183,16 +183,9 @@ class PMT:
                     os.makedirs(substancePath, exist_ok=True)
                     substanceFilename = f'{prefix}{assetName}.spp'
                     shutil.copy(os.path.join(scriptDir, 'Files', 'empty', 'emptySubstance.spp'), os.path.join(substancePath, substanceFilename))
-                    assetDetails['Substance'] = {'filename': substanceFilename, 'version': '2023'}
-
-                if useUnreal:
-                    unrealPath = os.path.join(assetPath, 'Unreal')
-                    os.makedirs(unrealPath, exist_ok=True)
-                    unrealFilename = f'{prefix}{assetName}.uasset'
-                    shutil.copy(os.path.join(scriptDir, 'Files', 'empty', 'emptyUnreal.uasset'), os.path.join(unrealPath, unrealFilename))
-                    assetDetails['Unreal'] = {'filename': unrealFilename, 'version': '5.3'}
+                    assetDetails['Substance'] = {'filename': substanceFilename, 'version': '2023'}                
                     
-                for dcc in ['Maya', 'Substance', 'Unreal']:
+                for dcc in ['Maya', 'Substance']:
                     if dcc not in assetDetails:
                         assetDetails[dcc] = 'NA'
                     
@@ -336,7 +329,7 @@ class PMT:
         
             os.rename(oldAssetPath, newAssetPath)
         
-            for dcc in ['Maya', 'Substance', 'Unreal']:
+            for dcc in ['Maya', 'Substance']:
                 if assetDetails[dcc] != 'NA':
                     dccDetails = assetDetails[dcc]
                     oldFilename = dccDetails['filename']
@@ -362,9 +355,9 @@ class PMT:
         try:
             if os.path.exists(filePath):
                 os.startfile(filePath)
-                return True, f'Opening file: {filePath}'
+                return True, f'Opening file!'
             else:
-                return False, f'File not found: {filePath}'
+                return False, f'File not found!'
         except Exception as e:
             return False, f'Error opening file: {str(e)}'
     
