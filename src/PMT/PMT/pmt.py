@@ -357,3 +357,15 @@ class PMT:
     
         except Exception as e:
             return False, f'Error renaming asset: {str(e)}'
+        
+    def openAsset(self, filePath):
+        try:
+            if os.path.exists(filePath):
+                os.startfile(filePath)
+                return True, f'Opening file: {filePath}'
+            else:
+                return False, f'File not found: {filePath}'
+        except Exception as e:
+            return False, f'Error opening file: {str(e)}'
+    
+

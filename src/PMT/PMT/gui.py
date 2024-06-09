@@ -159,6 +159,7 @@ class PMTWindow(QMainWindow):
         for assetName, assetDetails in assets.items(): 
             if assetDetails[dccType] != 'NA':
                 assetBoxName = f'{assetName} - {assetDetails[dccType]["filename"]}'
+                assetFullPath = os.path.join(assetDetails["path"], dccType, assetDetails[dccType]["filename"])
             else:
                 assetBoxName = f'{assetName} - No {dccType} Asset'
         
@@ -172,7 +173,8 @@ class PMTWindow(QMainWindow):
                 copyMoveBtn = QPushButton('Copy/Move', self)
                 exportBtn = QPushButton('Export', self)
                 deleteBtn = QPushButton('Delete', self)
-            
+                
+                openBtn.clicked.connect(partial(self.openAsset, assetFullPath))            
                 deleteBtn.clicked.connect(partial(self.delAsset, projName, assetName, dccType))
                 copyMoveBtn.clicked.connect(partial(self.openCopyMoveAssetDialog, assetName))
                 renameBtn.clicked.connect(partial(self.openRenameAssetDialog, assetName))
@@ -280,6 +282,10 @@ class PMTWindow(QMainWindow):
             self.showAssets(projName, dccType)
         else:
             self.statusBar.showMessage(msg)
+            
+    def openAsset(self, assetPath):
+        success, msg = self.pmt.openAsset(assetPath)
+        self.statusBar.showMessage(msg)
             
 class CreateAssetDialog(QDialog):
     def __init__(self, parent=None, pmt =None):
