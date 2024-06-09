@@ -391,7 +391,7 @@ class PMT:
 
                 gameEngineDetails = {
                     'filename': f'{projName}.uproject',
-                    'version': 'Latest'
+                    'version': '5.3.2'
                 }
             else:
                 gameEngineDetails = 'NA'
