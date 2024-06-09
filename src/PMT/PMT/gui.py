@@ -196,6 +196,9 @@ class PMTWindow(QMainWindow):
                 exportBtn = QPushButton('Export', self)
                 deleteBtn = QPushButton('Delete', self)
                 
+                if dccType == 'Substance':
+                    exportBtn.setEnabled(False)
+                
                 openBtn.clicked.connect(partial(self.openAsset, os.path.join(assetDetails["path"], dccType, assetDetails[dccType]["filename"])))            
                 deleteBtn.clicked.connect(partial(self.delAsset, projName, assetName, dccType))
                 copyMoveBtn.clicked.connect(partial(self.openCopyMoveAssetDialog, assetName))
