@@ -185,6 +185,7 @@ class PMTWindow(QMainWindow):
                 assetBoxLayout.addWidget(deleteBtn)
             else:
                 createBtn = QPushButton(f'Create {dccType} Asset', self)
+                createBtn.clicked.connect(partial(self.createDCCFiles, projName, assetDetails["type"], assetName, dccType))
                 assetBoxLayout.addWidget(createBtn)
         
             projGBoxLayout.addWidget(assetBox)
@@ -286,6 +287,20 @@ class PMTWindow(QMainWindow):
     def openAsset(self, assetPath, dccType):
         success, msg = self.pmt.openAsset(assetPath)        
         self.statusBar.showMessage(msg)
+        
+    def createDCCFiles(self, projName, assetType, assetName, dccType):           
+        if dccType == 'Maya':
+            success, msg = self.pmt.createAsset(projName, assetType, assetName, useMaya=True, useSubstance=False, individualFiles=True)
+        elif dccType == 'Substance':
+            success, msg = self.pmt.createAsset(projName, assetType, assetName, useMaya=False, useSubstance=True, individualFiles=True)
+        else:
+            success, msg = False, 'Invalid DCC type'
+            
+        if success:
+            self.statusBar.showMessage(msg)
+            self.showAssets(projName, dccType)
+        else:
+            self.statusBar.showMessage(msg)
             
 class CreateAssetDialog(QDialog):
     def __init__(self, parent=None, pmt =None):

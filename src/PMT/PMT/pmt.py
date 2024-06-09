@@ -153,7 +153,7 @@ class PMT:
         except Exception as e:
             return False, f'Error deleting project "{projName}": {str(e)}'
         
-    def createAsset(self, projName, assetType, assetName, useMaya=False, useSubstance=False):
+    def createAsset(self, projName, assetType, assetName, useMaya=False, useSubstance=False, individualFiles=False):
         projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')
         prefix = {
             'Characters': 'char_',
@@ -165,8 +165,10 @@ class PMT:
         scriptDir = os.path.dirname(os.path.abspath(__file__))  
 
         try:
-            if not os.path.exists(assetPath):
-                os.makedirs(assetPath)
+            if not os.path.exists(assetPath) or individualFiles:
+                
+                if not os.path.exists(assetPath):
+                    os.makedirs(assetPath)
 
                 assetDetails = {}
             
