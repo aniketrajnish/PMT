@@ -206,6 +206,9 @@ class PMT:
                 
                 with open(projConfigPath, 'w') as f:
                     json.dump(data, f, indent=4)
+                    
+                self.projects[projName]['Asset Count'] += 1
+                self.saveParentConfig()
                 
                 return True, f'Asset "{assetName}" created successfully.'
             else:
@@ -247,6 +250,8 @@ class PMT:
                     shutil.rmtree(assetPath)
                     msg = f"Deleted entire asset: {assetName}"
                     del data['Assets'][assetName]
+                    self.projects[projName]['Asset Count'] -= 1
+                    self.saveParentConfig()
                     
                 with open(projConfigPath, 'w') as f:
                     json.dump(data, f, indent=4)

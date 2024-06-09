@@ -371,15 +371,19 @@ class CopyMoveDialog(QDialog):
         self.setWindowTitle('Copy/Move Asset')
         self.setWindowIcon(QIcon('Files/logo.png'))
         
-        self.setGeometry(300, 300, 300, 600)
+        self.setGeometry(300, 300, 275, 50)
         self.show()
         
     def initLayouts(self):
         self.mainLayout = QVBoxLayout(self)
-        self.opTypeLayout = QHBoxLayout()
-        self.projListLayout = QVBoxLayout()
-        self.mainLayout.addLayout(self.opTypeLayout)
-        self.mainLayout.addLayout(self.projListLayout)
+        
+        self.opTypeGb = QGroupBox('Operation Type')
+        self.opTypeLayout = QHBoxLayout(self.opTypeGb)
+        self.projListGb = QGroupBox('Select Project:')
+        self.projListLayout = QVBoxLayout(self.projListGb)
+        
+        self.mainLayout.addWidget(self.opTypeGb)
+        self.mainLayout.addWidget(self.projListGb)
         
     def initComponents(self):
         self.initProjListGUI()
@@ -387,11 +391,11 @@ class CopyMoveDialog(QDialog):
         self.initOpTypeGUI()
         
     def initOpTypeGUI(self):
-        self.copyRadioBtn = QRadioButton('Copy', self)
+        self.copyRadioBtn = QRadioButton('Copy', self.opTypeGb)
         self.copyRadioBtn.toggled.connect(self.updateBtn)
         self.copyRadioBtn.setChecked(True)
         
-        self.moveRadioBtn = QRadioButton('Move', self)
+        self.moveRadioBtn = QRadioButton('Move', self.opTypeGb)
         self.moveRadioBtn.toggled.connect(self.updateBtn)
         
         self.opTypeLayout.addWidget(self.copyRadioBtn)
@@ -403,7 +407,7 @@ class CopyMoveDialog(QDialog):
         
         for proj in self.projList:
             if proj != self.pmt.currProj:
-                projCheck = QCheckBox(proj, self)
+                projCheck = QCheckBox(proj, self.projListGb)
                 self.projListLayout.addWidget(projCheck)
                 self.projChkBoxes.append(projCheck)
                 
