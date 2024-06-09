@@ -168,13 +168,15 @@ class PMTWindow(QMainWindow):
         
             if assetDetails[dccType] != 'NA':
                 openBtn = QPushButton('Open', self)
+                renameBtn = QPushButton('Rename', self)
                 copyMoveBtn = QPushButton('Copy/Move', self)
                 deleteBtn = QPushButton('Delete', self)
             
                 deleteBtn.clicked.connect(partial(self.delAsset, projName, assetName, dccType))
-                copyMoveBtn.clicked.connect(self.openCopyMoveDialog)
+                copyMoveBtn.clicked.connect(partial(self.openCopyMoveDialog, assetName))
         
                 assetBoxLayout.addWidget(openBtn)
+                assetBoxLayout.addWidget(renameBtn)
                 assetBoxLayout.addWidget(copyMoveBtn)
                 assetBoxLayout.addWidget(deleteBtn)
             else:
@@ -255,7 +257,8 @@ class PMTWindow(QMainWindow):
         if self.createAssetDialog.exec_():
             self.statusBar.showMessage('Opened Asset Creator!')
             
-    def openCopyMoveDialog(self):
+    def openCopyMoveDialog(self, currAsset):
+        self.pmt.currAsset = currAsset
         self.copyMoveDialog = CopyMoveDialog(self, self.pmt)
         
         if self.copyMoveDialog.exec_():
@@ -413,6 +416,7 @@ class CopyMoveDialog(QDialog):
                 
     def initCopyMoveBtnGUI(self):
         self.copyMoveBtn = QPushButton('Copy/Move', self)
+        self.copyMoveBtn.clicked.connect(self.onCopyMoveBtnClick)
         self.mainLayout.addWidget(self.copyMoveBtn)
         
     def updateBtn(self):
@@ -420,3 +424,19 @@ class CopyMoveDialog(QDialog):
             self.copyMoveBtn.setText('Copy')
         else:
             self.copyMoveBtn.setText('Move')
+            
+    def onCopyMoveBtnClick(self):
+        move = self.moveRadioBtn.isChecked()
+        targetProjs = [projChk.text() for projChk in self.projChkBoxes if projChk.isChecked()]
+    
+        if not targetProjs:
+            QMessageBox.warning(self, 'Warning', 'No target projects selected.')
+            return
+
+        success, msg = self.pmt.copyMoveAsset(self.pmt.currProj, targetProjs, self.pmt.currAsset, move)
+        if success:
+            QMessageBox.information(self, 'Success', msg)
+            self.accept()
+        else:
+            QMessageBox.critical(self, 'Error', msg)
+

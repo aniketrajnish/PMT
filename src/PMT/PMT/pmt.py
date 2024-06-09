@@ -10,6 +10,7 @@ class PMT:
         self.initPaths()  
         self.createBaseFolder()
         self.currProj = None
+        self.currAsset = None
         self.projects = self.loadParentConfig()
         self.getProjects()
         
@@ -261,7 +262,66 @@ class PMT:
                 return False, f'Asset "{assetName}" not found.'
             
         except Exception as e:
-            return False, f'Error deleting asset: {str(e)}'       
+            return False, f'Error deleting asset: {str(e)}' 
+        
+
+    def copyMoveAsset(self, srcProj, targetProjs, assetName, move=False):
+        srcConfigPath = os.path.join(self.basePath, srcProj, 'PMT Config', f'PMT_{srcProj}_Config.json')
+    
+        try:
+            with open(srcConfigPath, 'r') as f:
+                srcData = json.load(f)
+        
+            if assetName not in srcData['Assets']:
+                return False, f'Asset "{assetName}" not found in source project.'
+
+            assetDetails = srcData['Assets'][assetName]
+            assetType = assetDetails['type']
+            srcAssetPath = assetDetails['path']
+
+            for targetProj in targetProjs:
+                targetConfigPath = os.path.join(self.basePath, targetProj, 'PMT Config', f'PMT_{targetProj}_Config.json')
+                with open(targetConfigPath, 'r') as f:
+                    targetData = json.load(f)
+                
+                targetAssetPath = os.path.join(self.basePath, targetProj, 'Art Depot', assetType, assetName)
+                os.makedirs(targetAssetPath, exist_ok=True)
+            
+                for root, dirs, files in os.walk(srcAssetPath):
+                    relPath = os.path.relpath(root, srcAssetPath)
+                    targetPath = os.path.join(targetAssetPath, relPath)
+                    os.makedirs(targetPath, exist_ok=True)
+                    for file in files:
+                        srcPath = os.path.join(root, file)
+                        dstPath = os.path.join(targetPath, file)
+                        shutil.copy(srcPath, dstPath)
+                    
+                assetDetails['path'] = targetAssetPath
+                targetData['Assets'][assetName] = assetDetails
+                self.projects[targetProj]['Asset Count'] += 1
+                with open(targetConfigPath, 'w') as f:
+                    json.dump(targetData, f, indent=4)
+
+            if move:
+                shutil.rmtree(srcAssetPath)
+                del srcData['Assets'][assetName]
+                self.projects[srcProj]['Asset Count'] -= 1
+                with open(srcConfigPath, 'w') as f:
+                    json.dump(srcData, f, indent=4)
+
+            self.saveParentConfig()
+            if move:
+                return True, f'Asset "{assetName}" successfully moved to target projects.'
+            else:
+                return True, f'Asset "{assetName}" successfully copied to target projects.'
+
+        except Exception as e:
+            if move:
+                return False, f'Error moving asset: {str(e)}'
+            else:
+                return False, f'Error copying asset: {str(e)}'
+
+            
         
             
                     
