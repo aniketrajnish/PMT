@@ -103,6 +103,9 @@ class PMTWindow(QMainWindow):
         self.projList = self.pmt.getProjects()
 
         for proj in self.projList:
+            if proj == 'Studio Assets':
+                continue
+            
             projGb = QGroupBox(proj)
             projGb.setFixedHeight(80)
             projGbLayout = QHBoxLayout()
@@ -130,26 +133,32 @@ class PMTWindow(QMainWindow):
         self.clearExistingProjGUI()
         self.pushGUIState('Project')
         self.backBtn.setEnabled(True)
-
+         
         self.pmt.currProj = projName
-        projGBox = QGroupBox(projName + ' Assets')
+        print(f'Opening Project: {projName}')
+        if projName == 'Studio Assets':
+            projGBox = QGroupBox(projName)
+        else:
+            projGBox = QGroupBox(projName + ' Assets')
+            
         projGBoxLayout = QVBoxLayout()
         projGBox.setLayout(projGBoxLayout)
 
         createAssetBtn = QPushButton('Create Asset', self)
         createAssetBtn.clicked.connect(self.openAssetCreator)
         self.projListLayout.addWidget(createAssetBtn)
-    
-        createEngineSrcBtn = QPushButton('Create Unreal Project', self)
         
-        if self.pmt.projects[projName].get('Game Engine') != 'NA':
-            createEngineSrcBtn.setText('Open Unreal Project')
-            unrealProjectPath = os.path.join(self.pmt.projects[projName]['path'], 'Game Engine Depot', f"{projName}.uproject")
-            createEngineSrcBtn.clicked.connect(lambda: self.openAsset(unrealProjectPath))
-        else:
-            createEngineSrcBtn.clicked.connect(lambda: self.onCreateUnrealProjBtnClick(projName))
+        if projName != 'Studio Assets':    
+            createEngineSrcBtn = QPushButton('Create Unreal Project', self)
+        
+            if self.pmt.projects[projName].get('Game Engine') != 'NA':
+                createEngineSrcBtn.setText('Open Unreal Project')
+                unrealProjectPath = os.path.join(self.pmt.projects[projName]['path'], 'Game Engine Depot', f"{projName}.uproject")
+                createEngineSrcBtn.clicked.connect(lambda: self.openAsset(unrealProjectPath))
+            else:
+                createEngineSrcBtn.clicked.connect(lambda: self.onCreateUnrealProjBtnClick(projName))
             
-        self.projListLayout.addWidget(createEngineSrcBtn)
+            self.projListLayout.addWidget(createEngineSrcBtn)
 
         dccTypes = ['Maya', 'Substance']
 
@@ -162,7 +171,7 @@ class PMTWindow(QMainWindow):
         self.statusBar.showMessage(f'Opened Project: {projName}')
 
     def showAssets(self, projName, dccType):
-        assets = self.pmt.getAssets(projName=projName, dccType=dccType) 
+        assets = self.pmt.getAssets(projName=projName, dccType=dccType)
         self.clearExistingProjGUI()
         self.pushGUIState(dccType)
 
@@ -302,7 +311,7 @@ class PMTWindow(QMainWindow):
         success, msg = self.pmt.openAsset(assetPath)        
         self.statusBar.showMessage(msg)
         
-    def createDCCFiles(self, projName, assetType, assetName, dccType):           
+    def createDCCFiles(self, projName, assetType, assetName, dccType):  
         if dccType == 'Maya':
             success, msg = self.pmt.createAsset(projName, assetType, assetName, useMaya=True, useSubstance=False, individualFiles=True)
         elif dccType == 'Substance':
@@ -393,7 +402,7 @@ class CreateAssetDialog(QDialog):
         assetName = self.assetNameInput.text().strip()
         
         if not assetName:
-            self.statusBar.showMessage('Asset name cannot be empty')
+            QMessageBox.warning(self, 'Warning', 'Asset name cannot be empty.')
             return
         
         assetType = 'Characters' if self.charTypeRadioBtn.isChecked() else 'Props' if self.propTypeRadioBtn.isChecked() else 'Environments'        
@@ -406,6 +415,7 @@ class CreateAssetDialog(QDialog):
             self.accept()
         else:
             QMessageBox.critical(self, 'Error', msg)
+            
             
 class CopyMoveAssetDialog(QDialog):
     def __init__(self, parent=None, pmt =None):
@@ -455,10 +465,6 @@ class CopyMoveAssetDialog(QDialog):
     def initProjListGUI(self):
         self.projList = self.pmt.getProjects()
         self.projChkBoxes = []
-        
-        studioAssetsChk = QCheckBox('Studio Assets', self.projListGb)
-        self.projListLayout.addWidget(studioAssetsChk)
-        self.projChkBoxes.append(studioAssetsChk)
         
         for proj in self.projList:
             if proj != self.pmt.currProj:

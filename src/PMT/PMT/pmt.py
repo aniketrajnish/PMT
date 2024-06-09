@@ -79,13 +79,27 @@ class PMT:
                 
                 projectConfigPath = os.path.join(configFolderPath, f'PMT_Studio Assets_Config.json')
                 
+                self.projects = self.loadParentConfig()
+                
                 with open(projectConfigPath, 'w') as f:
                     json.dump({'Assets': {}}, f)
+                    
+                self.projects['Studio Assets'] = {
+                        'creationDate' : datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'path' : studioAssetsPath,
+                        'Asset Count' : 0,
+                        'Game Engine' : 'NA'
+                    }
+                
+                self.saveParentConfig()
+                print('Studio Assets folder created')
 
                 return True, f'Studio Assets folder created at {studioAssetsPath}'
             else:
+                print('Studio Assets folder already exists')
                 return False, f'Studio Assets folder already exists at {studioAssetsPath}'
         except Exception as e:
+            print(f'Error creating Studio Assets folder: {str(e)}')
             return False, f'Error creating Studio Assets folder: {str(e)}'
             
     def loadParentConfig(self):
@@ -260,7 +274,8 @@ class PMT:
             return False, f'Error creating asset: {str(e)}'
         
     def getAssets(self, projName, dccType):
-        projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')            
+        projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')
+        
         try:
             with open(projConfigPath, 'r') as file:
                 data = json.load(file)
@@ -320,12 +335,8 @@ class PMT:
             srcAssetPath = assetDetails['path']
 
             for targetProj in targetProjs:
-                if targetProj == 'Studio Assets':
-                    targetConfigPath = os.path.join(self.basePath, 'Studio Assets', 'PMT Config', f'PMT_Studio Assets_Config.json')
-                    targetAssetPath = os.path.join(self.basePath, 'Studio Assets', 'Art Depot', assetType, assetName)
-                else:
-                    targetConfigPath = os.path.join(self.basePath, targetProj, 'PMT Config', f'PMT_{targetProj}_Config.json')
-                    targetAssetPath = os.path.join(self.basePath, targetProj, 'Art Depot', assetType, assetName)               
+                targetAssetPath = os.path.join(self.basePath, targetProj, 'Art Depot', assetType, assetName)
+                targetConfigPath = os.path.join(self.basePath, targetProj, 'PMT Config', f'PMT_{targetProj}_Config.json')
             
                 if not os.path.exists(targetAssetPath):
                     os.makedirs(targetAssetPath, exist_ok=True)
@@ -342,15 +353,12 @@ class PMT:
                 assetDetails['path'] = targetAssetPath
             
                 with open(targetConfigPath, 'r+') as f:
-                    if targetProj == 'Studio Assets':
-                        json.dump(assetDetails, f, indent=4)
-                    else:
-                        targetData = json.load(f)
-                        targetData['Assets'][assetName] = assetDetails
-                        f.seek(0)
-                        f.truncate()
-                        json.dump(targetData, f, indent=4)
-
+                    targetData = json.load(f)
+                    targetData['Assets'][assetName] = assetDetails
+                    f.seek(0)
+                    f.truncate()
+                    json.dump(targetData, f, indent=4)
+                    
             if move:
                 shutil.rmtree(srcAssetPath)
                 del srcData['Assets'][assetName]
