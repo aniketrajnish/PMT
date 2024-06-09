@@ -126,26 +126,37 @@ class PMTWindow(QMainWindow):
         self.clearExistingProjGUI()
         self.pushGUIState('Project')
         self.backBtn.setEnabled(True)
-    
+
         self.pmt.currProj = projName
         print(self.pmt.currProj)
         projGBox = QGroupBox(projName + ' Assets')
         projGBoxLayout = QVBoxLayout()
         projGBox.setLayout(projGBoxLayout)
+
+        createAssetBtn = QPushButton('Create Asset', self)
+        createAssetBtn.clicked.connect(self.openAssetCreator)
+        self.projListLayout.addWidget(createAssetBtn)
     
-        createBtn = QPushButton('Create Asset', self)
-        createBtn.clicked.connect(self.openAssetCreator)
-        self.projListLayout.addWidget(createBtn)
-    
+        createEngineSrcBtn = QPushButton('Create Unreal Project', self)
+        
+        if self.pmt.projects[projName].get('Game Engine') != 'NA':
+            createEngineSrcBtn.setText('Open Unreal Project')
+            unrealProjectPath = os.path.join(self.pmt.projects[projName]['path'], 'Game Engine Depot', f"{projName}.uproject")
+            createEngineSrcBtn.clicked.connect(lambda: self.openAsset(unrealProjectPath))
+        else:
+            createEngineSrcBtn.clicked.connect(lambda: self.onCreateUnrealProjBtnClick(projName))
+            
+        self.projListLayout.addWidget(createEngineSrcBtn)
+
         dccTypes = ['Maya', 'Substance']
-    
+
         for dcc in dccTypes:
             dccBtn = QPushButton(f'{dcc} Assets', self)
             dccBtn.clicked.connect(partial(self.showAssets, projName, dcc))
             projGBoxLayout.addWidget(dccBtn)
-        
+    
         self.projListLayout.addWidget(projGBox)
-        self.statusBar.showMessage(f'Opened Project: {projName}')          
+        self.statusBar.showMessage(f'Opened Project: {projName}')
 
     def showAssets(self, projName, dccType):
         assets = self.pmt.getAssets(projName=projName, dccType=dccType) 
@@ -173,7 +184,7 @@ class PMTWindow(QMainWindow):
                 exportBtn = QPushButton('Export', self)
                 deleteBtn = QPushButton('Delete', self)
                 
-                openBtn.clicked.connect(partial(self.openAsset, os.path.join(assetDetails["path"], dccType, assetDetails[dccType]["filename"]), dccType))            
+                openBtn.clicked.connect(partial(self.openAsset, os.path.join(assetDetails["path"], dccType, assetDetails[dccType]["filename"])))            
                 deleteBtn.clicked.connect(partial(self.delAsset, projName, assetName, dccType))
                 copyMoveBtn.clicked.connect(partial(self.openCopyMoveAssetDialog, assetName))
                 renameBtn.clicked.connect(partial(self.openRenameAssetDialog, assetName, dccType))
@@ -284,7 +295,7 @@ class PMTWindow(QMainWindow):
         else:
             self.statusBar.showMessage(msg)
             
-    def openAsset(self, assetPath, dccType):
+    def openAsset(self, assetPath):
         success, msg = self.pmt.openAsset(assetPath)        
         self.statusBar.showMessage(msg)
         
@@ -301,6 +312,15 @@ class PMTWindow(QMainWindow):
             self.showAssets(projName, dccType)
         else:
             self.statusBar.showMessage(msg)
+    
+    def onCreateUnrealProjBtnClick(self, projName):
+        success, msg = self.pmt.createUnrealProject(projName)
+        if success:
+            self.statusBar.showMessage(msg)
+            self.openProj(projName)
+        else:
+            self.statusBar.showMessage(msg)
+        
             
 class CreateAssetDialog(QDialog):
     def __init__(self, parent=None, pmt =None):

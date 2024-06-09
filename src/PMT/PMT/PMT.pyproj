@@ -23,16 +23,17 @@
   <ItemGroup>
     <Compile Include="gui.py" />
     <Compile Include="main.py" />
-    <Compile Include="paths.py" />
     <Compile Include="pmt.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Files\" />
+    <Folder Include="Files\config\" />
     <Folder Include="__pycache__\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Files\logo.ico" />
     <Content Include="Files\logo.png" />
+    <Content Include="Files\config\PMT_PathConfig.env" />
     <Content Include="__pycache__\gui.cpython-39.pyc" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

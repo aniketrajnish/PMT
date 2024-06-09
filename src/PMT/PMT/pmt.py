@@ -2,8 +2,8 @@ import datetime
 import os
 import shutil
 from tkinter import SEL
-from paths import Paths
 import json
+import configparser
 
 class PMT:
     def __init__(self):
@@ -15,8 +15,19 @@ class PMT:
         self.getProjects()
         
     def initPaths(self):
-        self.basePath = Paths.getPath('parent')
-        self.parentConfigPath = os.path.join(self.basePath, 'PMT Config', 'PMT_ParentConfig.json')
+        self.scriptDir = os.path.dirname(os.path.abspath(__file__))
+        self.pathConfigDir = os.path.join(self.scriptDir, 'Files', 'config', 'PMT_PathConfig.env') 
+        print(self.pathConfigDir)
+        
+        pathConfig = configparser.ConfigParser()
+        pathConfig.read(self.pathConfigDir)
+        
+        self.basePath = pathConfig.get('PATHS', 'PARENT')
+        self.unrealPath = pathConfig.get('PATHS', 'UNREAL')
+        self.mayaPath = pathConfig.get('PATHS', 'MAYA')
+        self.substancePath = pathConfig.get('PATHS', 'SUBSTANCE')
+        
+        self.parentConfigPath = os.path.join(self.basePath, 'PMT Config', 'PMT_ParentConfig.json')   
         
     def createBaseFolder(self):
         try:
@@ -27,13 +38,12 @@ class PMT:
                 return True, f'Base folder created at {self.basePath}'
             
             if not os.path.exists(self.parentConfigPath):
-                self.initParentConfig()
+                self.initParentConfigs()
         except Exception as e:
             raise RuntimeError('C:/ drive not found')
         
-    def initParentConfig(self):
+    def initParentConfigs(self):
         configPath = os.path.join(self.basePath, 'PMT Config')
-        print(configPath)                          
         
         if not os.path.exists(configPath):
             os.makedirs(configPath)
@@ -41,6 +51,8 @@ class PMT:
         if not os.path.exists(self.parentConfigPath):
             with open(self.parentConfigPath, 'w') as f:
                 json.dump({'Projects':{}}, f)
+        
+        shutil.copy(self.pathConfigDir, os.path.join(self.basePath, 'PMT Config', 'PMT_PathConfig.env'))
             
     def loadParentConfig(self):
         try:
@@ -72,7 +84,8 @@ class PMT:
                     os.makedirs(depotPath)
                     
                     for folder in depotSubFolders:
-                        os.makedirs(os.path.join(depotPath, folder))
+                        if depot != 'Game Engine Depot':
+                            os.makedirs(os.path.join(depotPath, folder))
                         
                 configFolderPath = os.path.join(projPath, configFolder)                
                 os.makedirs(configFolderPath)
@@ -80,7 +93,8 @@ class PMT:
                 self.projects[projName] = {
                         'creationDate' : datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                         'path' : projPath,
-                        'Asset Count' : 0
+                        'Asset Count' : 0,
+                        'Game Engine' : 'NA'
                     }
                 
                 self.saveParentConfig()
@@ -162,7 +176,6 @@ class PMT:
         }.get(assetType, '')
 
         assetPath = os.path.join(self.basePath, projName, 'Art Depot', assetType, assetName)
-        scriptDir = os.path.dirname(os.path.abspath(__file__))  
 
         try:
             if not os.path.exists(assetPath) or individualFiles:
@@ -184,7 +197,7 @@ class PMT:
                     substancePath = os.path.join(assetPath, 'Substance')
                     os.makedirs(substancePath, exist_ok=True)
                     substanceFilename = f'{prefix}{assetName}.spp'
-                    shutil.copy(os.path.join(scriptDir, 'Files', 'empty', 'emptySubstance.spp'), os.path.join(substancePath, substanceFilename))
+                    shutil.copy(os.path.join(self.scriptDir, 'Files', 'empty', 'emptySubstance.spp'), os.path.join(substancePath, substanceFilename))
                     assetDetails['Substance'] = {'filename': substanceFilename, 'version': '2023'}                
                     
                 for dcc in ['Maya', 'Substance']:
@@ -211,7 +224,6 @@ class PMT:
                 return False, f'Asset "{assetName}" already exists.'
         except Exception as e:
             return False, f'Error creating asset: {str(e)}'
-
         
     def getAssets(self, projName, dccType):
         projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')            
@@ -257,8 +269,7 @@ class PMT:
                 return False, f'Asset "{assetName}" not found.'
             
         except Exception as e:
-            return False, f'Error deleting asset: {str(e)}' 
-        
+            return False, f'Error deleting asset: {str(e)}'         
 
     def copyMoveAsset(self, srcProj, targetProjs, assetName, move=False):
         srcConfigPath = os.path.join(self.basePath, srcProj, 'PMT Config', f'PMT_{srcProj}_Config.json')
@@ -362,5 +373,42 @@ class PMT:
                 return False, f'File not found!'
         except Exception as e:
             return False, f'Error opening file: {str(e)}'
+        
+    def createUnrealProject(self, projName):
+        try:
+            projPath = os.path.join(self.basePath, projName)
+            gameEngineDepotPath = os.path.join(projPath, 'Game Engine Depot')
+            unrealTemplatePath = os.path.join(self.scriptDir, 'Files', 'empty', 'emptyUnreal')
+            
+            if os.path.exists(unrealTemplatePath):
+                for item in os.listdir(unrealTemplatePath):
+                    source = os.path.join(unrealTemplatePath, item)
+                    destination = os.path.join(gameEngineDepotPath, item.replace('emptyUnreal', projName))
+                    if os.path.isdir(source):
+                        shutil.copytree(source, destination)
+                    else:
+                        shutil.copy2(source, destination)
+
+                gameEngineDetails = {
+                    'filename': f'{projName}.uproject',
+                    'version': 'Latest'
+                }
+            else:
+                gameEngineDetails = 'NA'
+                
+            self.projects[projName] = {
+                'creationDate': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'path': projPath,
+                'Asset Count': 0,
+                'Game Engine': gameEngineDetails
+            }
+            print(self.projects[projName])
+            self.saveParentConfig()
+
+            return True, f'Unreal project for "{projName}" created successfully.'
+        
+        except Exception as e:
+            return False, f"Error setting up Unreal project for {projName}: {str(e)}"
+
     
 
