@@ -122,13 +122,16 @@ class PMTWindow(QMainWindow):
 
             self.projListLayout.addWidget(projGb)
             
+        self.studioAssetsBtn = QPushButton('Studio Assets', self)
+        self.studioAssetsBtn.clicked.connect(lambda: self.openProj('Studio Assets'))
+        self.projListLayout.addWidget(self.studioAssetsBtn) 
+            
     def openProj(self, projName):
         self.clearExistingProjGUI()
         self.pushGUIState('Project')
         self.backBtn.setEnabled(True)
 
         self.pmt.currProj = projName
-        print(self.pmt.currProj)
         projGBox = QGroupBox(projName + ' Assets')
         projGBoxLayout = QVBoxLayout()
         projGBox.setLayout(projGBoxLayout)
@@ -319,8 +322,7 @@ class PMTWindow(QMainWindow):
             self.statusBar.showMessage(msg)
             self.openProj(projName)
         else:
-            self.statusBar.showMessage(msg)
-        
+            self.statusBar.showMessage(msg)        
             
 class CreateAssetDialog(QDialog):
     def __init__(self, parent=None, pmt =None):
@@ -454,6 +456,10 @@ class CopyMoveAssetDialog(QDialog):
         self.projList = self.pmt.getProjects()
         self.projChkBoxes = []
         
+        studioAssetsChk = QCheckBox('Studio Assets', self.projListGb)
+        self.projListLayout.addWidget(studioAssetsChk)
+        self.projChkBoxes.append(studioAssetsChk)
+        
         for proj in self.projList:
             if proj != self.pmt.currProj:
                 projCheck = QCheckBox(proj, self.projListGb)
@@ -548,4 +554,3 @@ class RenameAssetDialog(QDialog):
             self.accept()
         else:
             QMessageBox.critical(self, 'Error', msg)
-            

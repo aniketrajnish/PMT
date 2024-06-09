@@ -39,6 +39,9 @@ class PMT:
             
             if not os.path.exists(self.parentConfigPath):
                 self.initParentConfigs()
+                
+            self.createStudioAssetsFolder()
+            
         except Exception as e:
             raise RuntimeError('C:/ drive not found')
         
@@ -53,6 +56,37 @@ class PMT:
                 json.dump({'Projects':{}}, f)
         
         shutil.copy(self.pathConfigDir, os.path.join(self.basePath, 'PMT Config', 'PMT_PathConfig.env'))
+        
+    def createStudioAssetsFolder(self):
+        try:
+            studioAssetsPath = os.path.join(self.basePath, 'Studio Assets')
+            if not os.path.exists(studioAssetsPath):
+                os.makedirs(studioAssetsPath)
+                
+                depots = ['Art Depot', 'Intermediate Depot']
+                depotSubFolders = ['Characters', 'Environments', 'Props']
+                configFolder = 'PMT Config'
+                
+                for depot in depots:
+                    depotPath = os.path.join(studioAssetsPath, depot)
+                    os.makedirs(depotPath)
+                    
+                    for folder in depotSubFolders:
+                        os.makedirs(os.path.join(depotPath, folder))
+                
+                configFolderPath = os.path.join(studioAssetsPath, configFolder)
+                os.makedirs(configFolderPath)
+                
+                projectConfigPath = os.path.join(configFolderPath, f'PMT_Studio Assets_Config.json')
+                
+                with open(projectConfigPath, 'w') as f:
+                    json.dump({'Assets': {}}, f)
+
+                return True, f'Studio Assets folder created at {studioAssetsPath}'
+            else:
+                return False, f'Studio Assets folder already exists at {studioAssetsPath}'
+        except Exception as e:
+            return False, f'Error creating Studio Assets folder: {str(e)}'
             
     def loadParentConfig(self):
         try:
@@ -190,7 +224,7 @@ class PMT:
                     os.makedirs(mayaPath, exist_ok=True)
                     mayaFilename = f'{prefix}{assetName}.ma'
                     with open(os.path.join(mayaPath, mayaFilename), 'w') as f:
-                        f.write('// Maya ASCII 2024 scene\n')
+                        f.write('//Maya ASCII 2024 scene\n')
                     assetDetails['Maya'] = {'filename': mayaFilename, 'version': '2024'}
 
                 if useSubstance:
@@ -273,11 +307,11 @@ class PMT:
 
     def copyMoveAsset(self, srcProj, targetProjs, assetName, move=False):
         srcConfigPath = os.path.join(self.basePath, srcProj, 'PMT Config', f'PMT_{srcProj}_Config.json')
-    
+
         try:
             with open(srcConfigPath, 'r') as f:
                 srcData = json.load(f)
-        
+
             if assetName not in srcData['Assets']:
                 return False, f'Asset "{assetName}" not found in source project.'
 
@@ -286,13 +320,16 @@ class PMT:
             srcAssetPath = assetDetails['path']
 
             for targetProj in targetProjs:
-                targetConfigPath = os.path.join(self.basePath, targetProj, 'PMT Config', f'PMT_{targetProj}_Config.json')
-                with open(targetConfigPath, 'r') as f:
-                    targetData = json.load(f)
-                
-                targetAssetPath = os.path.join(self.basePath, targetProj, 'Art Depot', assetType, assetName)
-                os.makedirs(targetAssetPath, exist_ok=True)
+                if targetProj == 'Studio Assets':
+                    targetConfigPath = os.path.join(self.basePath, 'Studio Assets', 'PMT Config', f'PMT_Studio Assets_Config.json')
+                    targetAssetPath = os.path.join(self.basePath, 'Studio Assets', 'Art Depot', assetType, assetName)
+                else:
+                    targetConfigPath = os.path.join(self.basePath, targetProj, 'PMT Config', f'PMT_{targetProj}_Config.json')
+                    targetAssetPath = os.path.join(self.basePath, targetProj, 'Art Depot', assetType, assetName)               
             
+                if not os.path.exists(targetAssetPath):
+                    os.makedirs(targetAssetPath, exist_ok=True)
+        
                 for root, dirs, files in os.walk(srcAssetPath):
                     relPath = os.path.relpath(root, srcAssetPath)
                     targetPath = os.path.join(targetAssetPath, relPath)
@@ -301,12 +338,18 @@ class PMT:
                         srcPath = os.path.join(root, file)
                         dstPath = os.path.join(targetPath, file)
                         shutil.copy(srcPath, dstPath)
-                    
+                
                 assetDetails['path'] = targetAssetPath
-                targetData['Assets'][assetName] = assetDetails
-                self.projects[targetProj]['Asset Count'] += 1
-                with open(targetConfigPath, 'w') as f:
-                    json.dump(targetData, f, indent=4)
+            
+                with open(targetConfigPath, 'r+') as f:
+                    if targetProj == 'Studio Assets':
+                        json.dump(assetDetails, f, indent=4)
+                    else:
+                        targetData = json.load(f)
+                        targetData['Assets'][assetName] = assetDetails
+                        f.seek(0)
+                        f.truncate()
+                        json.dump(targetData, f, indent=4)
 
             if move:
                 shutil.rmtree(srcAssetPath)
@@ -316,6 +359,7 @@ class PMT:
                     json.dump(srcData, f, indent=4)
 
             self.saveParentConfig()
+            
             if move:
                 return True, f'Asset "{assetName}" successfully moved to target projects.'
             else:
