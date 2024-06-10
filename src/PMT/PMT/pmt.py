@@ -1,9 +1,13 @@
+from cgitb import text
 import datetime
+from logging import _srcfile
+from multiprocessing import process
 import os
 import shutil
 from tkinter import SEL
 import json
 import configparser
+import subprocess
 
 class PMT:
     def __init__(self):
@@ -17,12 +21,11 @@ class PMT:
     def initPaths(self):
         self.scriptDir = os.path.dirname(os.path.abspath(__file__))
         self.pathConfigDir = os.path.join(self.scriptDir, 'Files', 'config', 'PMT_PathConfig.env') 
-        print(self.pathConfigDir)
         
         pathConfig = configparser.ConfigParser()
         pathConfig.read(self.pathConfigDir)
         
-        self.basePath = pathConfig.get('PATHS', 'PARENT')
+        self.basePath = os.path.join(os.getenv('LOCALAPPDATA'), 'PMT')
         self.unrealPath = pathConfig.get('PATHS', 'UNREAL')
         self.mayaPath = pathConfig.get('PATHS', 'MAYA')
         self.substancePath = pathConfig.get('PATHS', 'SUBSTANCE')
@@ -96,10 +99,8 @@ class PMT:
 
                 return True, f'Studio Assets folder created at {studioAssetsPath}'
             else:
-                print('Studio Assets folder already exists')
                 return False, f'Studio Assets folder already exists at {studioAssetsPath}'
         except Exception as e:
-            print(f'Error creating Studio Assets folder: {str(e)}')
             return False, f'Error creating Studio Assets folder: {str(e)}'
             
     def loadParentConfig(self):
@@ -454,13 +455,40 @@ class PMT:
                 'Asset Count': 0,
                 'Game Engine': gameEngineDetails
             }
-            print(self.projects[projName])
             self.saveParentConfig()
 
             return True, f'Unreal project for "{projName}" created successfully.'
         
         except Exception as e:
             return False, f"Error setting up Unreal project for {projName}: {str(e)}"
+        
+    def exportAsset(self, importToUnreal = False):
+        projConfigPath = os.path.join(self.basePath, self.currProj, 'Tools', f'PMT_{self.currProj}_Config.json')
+        
+        with open(projConfigPath, 'r') as f:
+            data = json.load(f)            
+
+        assetDetails = data['Assets'][self.currAsset]
+        assetType = assetDetails['type']
+        mayaFilePath = os.path.join(assetDetails['path'], 'Maya', assetDetails['Maya']['filename'])
+        mayaFilePath = mayaFilePath.replace('\\', '/') 
+
+        mayaScriptPath = os.path.join(self.scriptDir, 'Files', 'io', 'maya.py')
+        mayaScriptPath = mayaScriptPath.replace('\\', '/')  
+        
+        command = (f'"{self.mayaPath}" -command "file -open \\"{mayaFilePath}\\"; '
+           f'python(\\"exec(open(\\\'{mayaScriptPath}\\\').read()); '
+           f'exportAssetAndClose(\\\'{self.currProj}\\\', \\\'{assetType}\\\')\\\")"')
+
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout, stderr = process.communicate()
+
+        if process.returncode == 0:
+            return True, "Asset exported successfully."
+        else:
+            error_message = stderr
+            return False, f"Failed to export asset. Error: {error_message}"
+
 
     
 

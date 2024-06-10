@@ -21,6 +21,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Files\io\maya.py" />
     <Compile Include="gui.py" />
     <Compile Include="main.py" />
     <Compile Include="pmt.py" />
@@ -28,6 +29,7 @@
   <ItemGroup>
     <Folder Include="Files\" />
     <Folder Include="Files\config\" />
+    <Folder Include="Files\io\" />
     <Folder Include="__pycache__\" />
   </ItemGroup>
   <ItemGroup>

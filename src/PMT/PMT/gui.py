@@ -135,7 +135,7 @@ class PMTWindow(QMainWindow):
         self.backBtn.setEnabled(True)
          
         self.pmt.currProj = projName
-        print(f'Opening Project: {projName}')
+        
         if projName == 'Studio Assets':
             projGBox = QGroupBox(projName)
         else:
@@ -209,10 +209,11 @@ class PMTWindow(QMainWindow):
                 if dccType == 'Substance':
                     exportBtn.setEnabled(False)
             
-                openBtn.clicked.connect(partial(self.openAsset, os.path.join(assetDetails["path"], dccType, assetDetails[dccType]["filename"])))            
-                deleteBtn.clicked.connect(partial(self.delAsset, projName, assetName, dccType))
-                copyMoveBtn.clicked.connect(partial(self.openCopyMoveAssetDialog, assetName, dccType))
+                openBtn.clicked.connect(partial(self.openAsset, os.path.join(assetDetails["path"], dccType, assetDetails[dccType]["filename"])))     
                 renameBtn.clicked.connect(partial(self.openRenameAssetDialog, assetName, dccType))
+                copyMoveBtn.clicked.connect(partial(self.openCopyMoveAssetDialog, assetName, dccType))
+                exportBtn.clicked.connect(partial(self.openExportAssetDialog, assetName, dccType))       
+                deleteBtn.clicked.connect(partial(self.delAsset, projName, assetName, dccType))
     
                 assetBoxLayout.addWidget(openBtn)
                 assetBoxLayout.addWidget(renameBtn)
@@ -311,6 +312,14 @@ class PMTWindow(QMainWindow):
         
         if self.renameAssetDialog.exec_():
             self.statusBar.showMessage('Opened Rename Dialog!')
+            self.showAssets(self.pmt.currProj, dccType)
+            
+    def openExportAssetDialog(self, currAsset, dccType):
+        self.pmt.currAsset = currAsset
+        self.exportAssetDialog = ExportAssetDialog(self, self.pmt)
+        
+        if self.exportAssetDialog.exec_():
+            self.statusBar.showMessage('Opened Export Dialog!')
             self.showAssets(self.pmt.currProj, dccType)
             
     def delAsset(self, projName, assetName, dccType):
@@ -574,3 +583,49 @@ class RenameAssetDialog(QDialog):
             self.accept()
         else:
             QMessageBox.critical(self, 'Error', msg)
+            
+class ExportAssetDialog(QDialog):
+    def __init__(self, parent=None, pmt =None):
+        super(ExportAssetDialog, self).__init__(parent)
+        self.pmt = pmt
+        self.initUI()
+        
+    def initUI(self):
+        self.initWindow()
+        self.initLayouts()
+        self.initComponents()
+    
+    def initWindow(self):
+        self.setWindowTitle('Export Asset')
+        self.setWindowIcon(QIcon('Files/logo.png'))
+        
+        self.setGeometry(300, 300, 250, 50)
+        self.show()
+        
+    def initLayouts(self):
+        self.mainLayout = QVBoxLayout(self)       
+        
+    def initComponents(self):
+        self.initExportOptionGUI()
+        self.initExportBtnGUI()
+        pass
+    
+    def initExportOptionGUI(self): 
+        self.engineChk = QCheckBox('Import to Unreal Engine', self)
+        self.engineChk.setChecked(True)
+        self.mainLayout.addWidget(self.engineChk)
+        
+    def initExportBtnGUI(self):
+        self.exportBtn = QPushButton('Export', self)
+        self.exportBtn.clicked.connect(self.onExportBtnClick)
+        self.mainLayout.addWidget(self.exportBtn)
+    
+    def onExportBtnClick(self):
+        success, msg = self.pmt.exportAsset(self.engineChk.isChecked())
+        
+        if success:
+            QMessageBox.information(self, 'Success', msg)
+            self.accept()
+        else:
+            QMessageBox.critical(self, 'Error', msg)
+    
