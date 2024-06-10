@@ -178,32 +178,42 @@ class PMTWindow(QMainWindow):
         projGBox = QGroupBox(f'{projName} - {dccType} Assets')
         projGBoxLayout = QVBoxLayout()
         projGBox.setLayout(projGBoxLayout)
-    
+        
+        typeGroupBoxes = {}
+
         for assetName, assetDetails in assets.items(): 
+            assetType = assetDetails["type"] 
+            if assetType not in typeGroupBoxes:
+                typeGroupBox = QGroupBox(f'{assetType} Assets')
+                typeGroupBoxLayout = QVBoxLayout()
+                typeGroupBox.setLayout(typeGroupBoxLayout)
+                typeGroupBoxes[assetType] = typeGroupBox
+                projGBoxLayout.addWidget(typeGroupBox)
+
             if assetDetails[dccType] != 'NA':
                 assetBoxName = f'{assetName} - {assetDetails[dccType]["filename"]}'
             else:
                 assetBoxName = f'{assetName} - No {dccType} Asset'
-        
+    
             assetBox = QGroupBox(assetBoxName)
             assetBoxLayout = QHBoxLayout()
             assetBox.setLayout(assetBoxLayout)
-        
+    
             if assetDetails[dccType] != 'NA':
                 openBtn = QPushButton('Open', self)
                 renameBtn = QPushButton('Rename', self)
                 copyMoveBtn = QPushButton('Copy/Move', self)
                 exportBtn = QPushButton('Export', self)
                 deleteBtn = QPushButton('Delete', self)
-                
+            
                 if dccType == 'Substance':
                     exportBtn.setEnabled(False)
-                
+            
                 openBtn.clicked.connect(partial(self.openAsset, os.path.join(assetDetails["path"], dccType, assetDetails[dccType]["filename"])))            
                 deleteBtn.clicked.connect(partial(self.delAsset, projName, assetName, dccType))
-                copyMoveBtn.clicked.connect(partial(self.openCopyMoveAssetDialog, assetName))
+                copyMoveBtn.clicked.connect(partial(self.openCopyMoveAssetDialog, assetName, dccType))
                 renameBtn.clicked.connect(partial(self.openRenameAssetDialog, assetName, dccType))
-        
+    
                 assetBoxLayout.addWidget(openBtn)
                 assetBoxLayout.addWidget(renameBtn)
                 assetBoxLayout.addWidget(copyMoveBtn)
@@ -213,11 +223,11 @@ class PMTWindow(QMainWindow):
                 createBtn = QPushButton(f'Create {dccType} Asset', self)
                 createBtn.clicked.connect(partial(self.createDCCFiles, projName, assetDetails["type"], assetName, dccType))
                 assetBoxLayout.addWidget(createBtn)
-        
-            projGBoxLayout.addWidget(assetBox)
+    
+            typeGroupBoxes[assetType].layout().addWidget(assetBox)
 
         self.projListLayout.addWidget(projGBox)
-        self.statusBar.showMessage(f'Opened {dccType} Assets for Project: {projName}')           
+        self.statusBar.showMessage(f'Opened {dccType} Assets for Project: {projName}')         
     
     def createRenameProjGUI(self, projName, layout):
         for i in range(layout.count()):
@@ -287,12 +297,13 @@ class PMTWindow(QMainWindow):
         if self.createAssetDialog.exec_():
             self.statusBar.showMessage('Opened Asset Creator!')
             
-    def openCopyMoveAssetDialog(self, currAsset):
+    def openCopyMoveAssetDialog(self, currAsset, dccType):
         self.pmt.currAsset = currAsset
         self.copyMoveAssetDialog = CopyMoveAssetDialog(self, self.pmt)
         
         if self.copyMoveAssetDialog.exec_():
             self.statusBar.showMessage('Opened Copy/Move Dialog!')
+            self.showAssets(self.pmt.currProj, dccType)
             
     def openRenameAssetDialog(self, currAsset, dccType):
         self.pmt.currAsset = currAsset
