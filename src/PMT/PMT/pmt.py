@@ -27,7 +27,7 @@ class PMT:
         self.mayaPath = pathConfig.get('PATHS', 'MAYA')
         self.substancePath = pathConfig.get('PATHS', 'SUBSTANCE')
         
-        self.parentConfigPath = os.path.join(self.basePath, 'PMT Config', 'PMT_ParentConfig.json')   
+        self.parentConfigPath = os.path.join(self.basePath, 'Tools', 'PMT_ParentConfig.json')   
         
     def createBaseFolder(self):
         try:
@@ -46,7 +46,7 @@ class PMT:
             raise RuntimeError('C:/ drive not found')
         
     def initParentConfigs(self):
-        configPath = os.path.join(self.basePath, 'PMT Config')
+        configPath = os.path.join(self.basePath, 'Tools')
         
         if not os.path.exists(configPath):
             os.makedirs(configPath)
@@ -55,7 +55,7 @@ class PMT:
             with open(self.parentConfigPath, 'w') as f:
                 json.dump({'Projects':{}}, f)
         
-        shutil.copy(self.pathConfigDir, os.path.join(self.basePath, 'PMT Config', 'PMT_PathConfig.env'))
+        shutil.copy(self.pathConfigDir, os.path.join(self.basePath, 'Tools', 'PMT_PathConfig.env'))
         
     def createStudioAssetsFolder(self):
         try:
@@ -65,7 +65,7 @@ class PMT:
                 
                 depots = ['Art Depot', 'Intermediate Depot']
                 depotSubFolders = ['Characters', 'Environments', 'Props']
-                configFolder = 'PMT Config'
+                configFolder = 'Tools'
                 
                 for depot in depots:
                     depotPath = os.path.join(studioAssetsPath, depot)
@@ -125,7 +125,7 @@ class PMT:
                 
                 depots = ['Art Depot', 'Game Engine Depot', 'Intermediate Depot']
                 depotSubFolders = ['Characters', 'Environments', 'Props']
-                configFolder = 'PMT Config'
+                configFolder = 'Tools'
 
                 for depot in depots:
                     depotPath = os.path.join(projPath, depot)
@@ -181,8 +181,8 @@ class PMT:
             oldPath = os.path.join(self.basePath, oldName)
             newPath = os.path.join(self.basePath, newName)
         
-            oldConfigPath = os.path.join(oldPath, 'PMT Config', f'PMT_{oldName}_Config.json')
-            newConfigPath = os.path.join(oldPath, 'PMT Config', f'PMT_{newName}_Config.json')
+            oldConfigPath = os.path.join(oldPath, 'Tools', f'PMT_{oldName}_Config.json')
+            newConfigPath = os.path.join(oldPath, 'Tools', f'PMT_{newName}_Config.json')
 
             if os.path.exists(newPath):
                 return False, f'Project "{newName}" already exists.'
@@ -216,7 +216,7 @@ class PMT:
             return False, f'Error deleting project "{projName}": {str(e)}'
         
     def createAsset(self, projName, assetType, assetName, useMaya=False, useSubstance=False, individualFiles=False):
-        projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')
+        projConfigPath = os.path.join(self.basePath, projName, 'Tools', f'PMT_{projName}_Config.json')
         prefix = {
             'Characters': 'char_',
             'Environments': 'env_',
@@ -274,7 +274,7 @@ class PMT:
             return False, f'Error creating asset: {str(e)}'
         
     def getAssets(self, projName, dccType):
-        projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')
+        projConfigPath = os.path.join(self.basePath, projName, 'Tools', f'PMT_{projName}_Config.json')
         
         try:
             with open(projConfigPath, 'r') as file:
@@ -285,7 +285,7 @@ class PMT:
             return {}
         
     def deleteAsset(self, projName, assetName, dccType):
-        projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')
+        projConfigPath = os.path.join(self.basePath, projName, 'Tools', f'PMT_{projName}_Config.json')
         assetDeleted = False
         
         try:
@@ -321,7 +321,7 @@ class PMT:
             return False, f'Error deleting asset: {str(e)}'         
 
     def copyMoveAsset(self, srcProj, targetProjs, assetName, move=False):
-        srcConfigPath = os.path.join(self.basePath, srcProj, 'PMT Config', f'PMT_{srcProj}_Config.json')
+        srcConfigPath = os.path.join(self.basePath, srcProj, 'Tools', f'PMT_{srcProj}_Config.json')
 
         try:
             with open(srcConfigPath, 'r') as f:
@@ -336,7 +336,7 @@ class PMT:
 
             for targetProj in targetProjs:
                 targetAssetPath = os.path.join(self.basePath, targetProj, 'Art Depot', assetType, assetName)
-                targetConfigPath = os.path.join(self.basePath, targetProj, 'PMT Config', f'PMT_{targetProj}_Config.json')
+                targetConfigPath = os.path.join(self.basePath, targetProj, 'Tools', f'PMT_{targetProj}_Config.json')
             
                 if not os.path.exists(targetAssetPath):
                     os.makedirs(targetAssetPath, exist_ok=True)
@@ -380,7 +380,7 @@ class PMT:
                 return False, f'Error copying asset: {str(e)}'
             
     def renameAsset(self, projName, oldAssetName, newAssetName):
-        projConfigPath = os.path.join(self.basePath, projName, 'PMT Config', f'PMT_{projName}_Config.json')
+        projConfigPath = os.path.join(self.basePath, projName, 'Tools', f'PMT_{projName}_Config.json')
         try:
             with open(projConfigPath, 'r') as f:
                 data = json.load(f)
