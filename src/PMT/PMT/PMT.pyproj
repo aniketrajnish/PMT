@@ -22,6 +22,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Files\io\maya.py" />
+    <Compile Include="Files\io\unreal.py" />
     <Compile Include="gui.py" />
     <Compile Include="main.py" />
     <Compile Include="pmt.py" />

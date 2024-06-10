@@ -621,7 +621,7 @@ class ExportAssetDialog(QDialog):
         self.mainLayout.addWidget(self.exportBtn)
     
     def onExportBtnClick(self):
-        success, msg = self.pmt.exportAsset(self.engineChk.isChecked())
+        success, msg = self.pmt.exportAssetFromMaya(self.engineChk.isChecked())
         
         if success:
             QMessageBox.information(self, 'Success', msg)

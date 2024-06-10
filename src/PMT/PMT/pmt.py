@@ -95,7 +95,6 @@ class PMT:
                     }
                 
                 self.saveParentConfig()
-                print('Studio Assets folder created')
 
                 return True, f'Studio Assets folder created at {studioAssetsPath}'
             else:
@@ -282,7 +281,6 @@ class PMT:
                 data = json.load(file)
                 return data.get('Assets', {})
         except Exception as e:
-            print(f"Failed to read project data: {e}")
             return {}
         
     def deleteAsset(self, projName, assetName, dccType):
@@ -462,33 +460,61 @@ class PMT:
         except Exception as e:
             return False, f"Error setting up Unreal project for {projName}: {str(e)}"
         
-    def exportAsset(self, importToUnreal = False):
+    def exportAssetFromMaya(self, importToUnreal=False):
         projConfigPath = os.path.join(self.basePath, self.currProj, 'Tools', f'PMT_{self.currProj}_Config.json')
-        
+    
         with open(projConfigPath, 'r') as f:
-            data = json.load(f)            
+            data = json.load(f)
 
         assetDetails = data['Assets'][self.currAsset]
         assetType = assetDetails['type']
         mayaFilePath = os.path.join(assetDetails['path'], 'Maya', assetDetails['Maya']['filename'])
-        mayaFilePath = mayaFilePath.replace('\\', '/') 
+        mayaFilePath = mayaFilePath.replace('\\', '/')
 
         mayaScriptPath = os.path.join(self.scriptDir, 'Files', 'io', 'maya.py')
-        mayaScriptPath = mayaScriptPath.replace('\\', '/')  
-        
+        mayaScriptPath = mayaScriptPath.replace('\\', '/')
+
         command = (f'"{self.mayaPath}" -command "file -open \\"{mayaFilePath}\\"; '
-           f'python(\\"exec(open(\\\'{mayaScriptPath}\\\').read()); '
-           f'exportAssetAndClose(\\\'{self.currProj}\\\', \\\'{assetType}\\\')\\\")"')
+                   f'python(\\"exec(open(\\\'{mayaScriptPath}\\\').read()); '
+                   f'exportAssetAndClose(\\\'{self.currProj}\\\', \\\'{assetType}\\\')\\\")"')
 
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         stdout, stderr = process.communicate()
 
         if process.returncode == 0:
+            if importToUnreal:
+                self.importAssetToUnreal(mayaFilePath, assetType=assetType)
             return True, "Asset exported successfully."
         else:
-            error_message = stderr
-            return False, f"Failed to export asset. Error: {error_message}"
+            errMsg = stderr
+            return False, f"Failed to export asset. Error: {errMsg}"
 
 
-    
+    def importAssetToUnreal(self, mayaFilePath, assetType):
+        mayaFileName = os.path.basename(mayaFilePath)
+        fbxFileName = os.path.splitext(mayaFileName)[0] + '.fbx'
+        assetPath = os.path.join(self.basePath, self.currProj, 'Intermediate Depot', assetType, fbxFileName)
+        assetPath = assetPath.replace('\\', '/')
 
+        unrealScriptPath = os.path.join(self.scriptDir, 'Files', 'io', 'unreal.py')
+        unrealScriptPath = unrealScriptPath.replace('\\', '/')
+
+        unrealProjectPath = os.path.join(self.basePath, self.currProj, 'Game Engine Depot', f"{self.currProj}.uproject")
+        unrealProjectPath = unrealProjectPath.replace('\\', '/')
+
+        if not os.path.exists(unrealProjectPath):
+            errMsg = "Create the Unreal Engine Project first."
+            return False, errMsg
+
+        pythonCommand = f"exec(open('{unrealScriptPath}').read()); importAsset('{assetPath}', '/Game/Meshes/')"
+
+        command = f'"{self.unrealPath}" "{unrealProjectPath}" -run=pythonscript -script="{pythonCommand}"'
+
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout, stderr = process.communicate()
+
+        if process.returncode == 0:
+            return True, "Asset imported to Unreal Engine successfully."
+        else:
+            errMsg = stderr
+            return False, f"Failed to import asset to Unreal Engine. Error: {errMsg}"
