@@ -241,11 +241,11 @@ class PMT:
     def renameProject(self, oldName, newName):
         '''
         Renames a project.
-        
+    
         Args:
         oldName (str): The old name of the project.
         newName (str): The new name of the project.
-        
+    
         Returns:
         bool: True if the project is renamed successfully, False otherwise.
         str: A message indicating the result of the operation to be displayed in the GUI.
@@ -256,7 +256,7 @@ class PMT:
         try:
             oldPath = os.path.join(self.basePath, oldName)
             newPath = os.path.join(self.basePath, newName)
-        
+    
             oldConfigPath = os.path.join(oldPath, 'Tools', f'PMT_{oldName}_Config.json')
             newConfigPath = os.path.join(oldPath, 'Tools', f'PMT_{newName}_Config.json') # also renaming the project config file
 
@@ -266,17 +266,25 @@ class PMT:
             if os.path.exists(oldConfigPath):
                 os.rename(oldConfigPath, newConfigPath)
                 os.rename(oldPath, newPath)
-        
+
+            oldUnrealProjectPath = os.path.join(newPath, 'Game Engine Depot', f'{oldName}.uproject') # renaming the unreal project file if it exists
+            newUnrealProjectPath = os.path.join(newPath, 'Game Engine Depot', f'{newName}.uproject')
+            
+            if os.path.exists(oldUnrealProjectPath):
+                os.rename(oldUnrealProjectPath, newUnrealProjectPath)
+                self.projects[oldName]['Game Engine']['filename'] = f'{newName}.uproject'
+                   
             self.projects[newName] = self.projects.pop(oldName)
             self.projects[newName]['path'] = newPath
             self.saveParentConfig() # renaming the project in the parent config
-        
+            
             self.getProjects()
-        
-            return True, f'Project "{oldName}" renamed to "{newName}" successfully.'
     
+            return True, f'Project "{oldName}" renamed to "{newName}" successfully.'
+
         except Exception as e:
             return False, f'Failed to rename project: {str(e)}'
+
     
     def deleteProject(self, projName):
         '''
